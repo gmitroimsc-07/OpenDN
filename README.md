@@ -75,12 +75,38 @@ The grammar is deliberately trivial — `KEY: value` header lines and
 language takes ~20 lines. Full rules in
 [`docs/payload-spec.md`](docs/payload-spec.md).
 
+## Automatic mode — the watcher
+
+No JSON, no commands per note: point a folder watcher at wherever your
+delivery-note PDFs land and every one comes out stamped.
+
+```bash
+opendn watch in/ out/
+```
+
+Print with **Microsoft Print to PDF** (or any print-to-PDF) into `in/`, or
+point your ERP's PDF export there. Each PDF is read (text layer only — no
+OCR), parsed with a per-supplier template from [`templates/`](templates/)
+(see [`docs/templates.md`](docs/templates.md)) or a generic fallback, and:
+
+- `out/NAME.stamped.pdf` — your document with the QR stamped on it
+- `out/NAME.stamped.payload.txt` — the payload as text
+- `out/archive/` — the original, untouched
+- `out/review/` — anything unparseable, untouched, with a `.reason.txt`
+  explaining why (**fail-open**: nothing is ever blocked, guessed or
+  modified in place)
+
+Folders and defaults can live in `opendn.config.json`; `--once` processes
+what's already in the folder and exits (handy in scripts and scheduled
+tasks). A true virtual printer — no print-to-PDF step at all — is next on
+the roadmap.
+
 ## Exporting from your system
 
 Most ERP/accounts systems can export delivery notes as CSV or JSON. Map
 your export to the `note.json` fields above and call `opendn` from a script
-or scheduled task at print time. (A print-gateway version that captures
-print jobs automatically — no export step at all — is on the roadmap.)
+or scheduled task at print time — or export PDFs straight into the
+watcher's input folder (above).
 
 ## Test
 

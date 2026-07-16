@@ -1,7 +1,8 @@
 # OpenDN Roadmap
 
-Where this project is going. Current state: **v0.1.0** — the core toolkit
-(payload builder/parser, QR generation, A6 label, PDF stamping, CLI).
+Where this project is going. Current state: **v0.2.0** — the core toolkit
+(payload builder/parser, QR generation, A6 label, PDF stamping, CLI) plus
+Milestone 1, the Watcher (`opendn watch`).
 
 ## Design principles (settled — do not reopen without strong reason)
 
@@ -16,7 +17,7 @@ Where this project is going. Current state: **v0.1.0** — the core toolkit
 4. **EC level Q, ≥40 mm print size** — codes must survive damaged paper.
 5. **Fictional data only** in examples/tests (Ofcom reserved phone ranges).
 
-## Milestone 1 — the Watcher (next up)
+## Milestone 1 — the Watcher (✅ shipped in v0.2.0)
 
 **Endpoint: when a user prints a delivery note, a stamped PDF is saved
 automatically to a dedicated folder.** No commands, no manual steps.

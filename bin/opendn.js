@@ -21,6 +21,15 @@ Usage:
   opendn parse <payload.txt | ->
       Parse a scanned payload back into JSON (reference parser for platforms).
 
+  opendn watch [<in-dir> <out-dir>] [--templates DIR] [--config FILE]
+               [--size MM] [--page N] [--once]
+      Watch a folder: every PDF dropped in comes out stamped in the output
+      folder (originals → archive/, unparseable → review/ with a reason —
+      fail-open, nothing is ever blocked or modified in place). Print or
+      export your delivery notes into the input folder and forget about it.
+      --once processes the files already there and exits. Folders and
+      options can also live in opendn.config.json.
+
   opendn example
       Print a template note.json to fill in.
 
@@ -71,6 +80,25 @@ async function main() {
     const stamped = await stampPdf(fs.readFileSync(args[0]), payload, note, { pageIndex: pageN - 1, qrMm: size });
     fs.writeFileSync(out, stamped);
     console.log(`${out} written — QR (${size} mm) stamped on page ${pageN}`);
+    return;
+  }
+
+  if (cmd === 'watch') {
+    const { loadConfig } = require('../src/config');
+    const { watch } = require('../src/watch');
+    const configFile = arg(args, '--config', null);
+    const templates = arg(args, '--templates', null);
+    const qrMm = arg(args, '--size', null);
+    const page = arg(args, '--page', null);
+    const once = args.includes('--once');
+    if (once) args.splice(args.indexOf('--once'), 1);
+    const cfg = loadConfig(configFile, {
+      input: args[0], output: args[1],
+      templates: templates || undefined,
+      qrMm: qrMm ? parseFloat(qrMm) : undefined,
+      page: page ? parseInt(page, 10) : undefined,
+    });
+    await watch(cfg, { once });
     return;
   }
 
