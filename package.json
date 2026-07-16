@@ -1,0 +1,21 @@
+{
+  "name": "opendn",
+  "version": "0.1.0",
+  "description": "OpenDN — the open delivery-note QR standard and toolkit: put the complete delivery note into a plain-text QR code anyone can read (OpenDN v1)",
+  "license": "MIT",
+  "bin": { "opendn": "bin/opendn.js" },
+  "main": "src/payload.js",
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0",
+    "zxing-wasm": "^2.2.0"
+  },
+  "keywords": ["delivery-note", "qr", "construction", "supply-chain", "logistics", "smartwaste"]
+}

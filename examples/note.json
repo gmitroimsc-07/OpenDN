@@ -1,0 +1,83 @@
+{
+  "note": "DN10245876",
+  "date": "2026-02-05 05:48",
+  "supplier": "Brightmoor Trade Supplies Ltd, 12 Foundry Lane, Milton Keynes MK9 1AA, T:01632 960812",
+  "customer": "Stonegate Construction Ltd, Unit 4, Harbour Business Park, Riverton RV2 4TQ",
+  "deliverTo": "Stonegate Site 12, 55 Meadow Way, Northbridge NB1 5GH, T:07700 900123",
+  "ref": "G123/SO45678901",
+  "custRef": "OAKFIELD0402-2026",
+  "account": "456789",
+  "weightKg": 111.55,
+  "items": [
+    {
+      "code": "5101001",
+      "desc": "Trade Satinwood Paint Light Tint 5L S1005-Y10R",
+      "qty": 3
+    },
+    {
+      "code": "5101002",
+      "desc": "QD Exterior Flexible Undercoat White 5L",
+      "qty": 1
+    },
+    {
+      "code": "5101003",
+      "desc": "QD Satin Tinted Medium 2.5L S1005-Y10R",
+      "qty": 2
+    },
+    {
+      "code": "5101004",
+      "desc": "Stain Block Primer 5L",
+      "qty": 1
+    },
+    {
+      "code": "5101005",
+      "desc": "Vinyl Matt Emulsion Tinted Light 5L S1005-Y10R",
+      "qty": 4
+    },
+    {
+      "code": "5101006",
+      "desc": "Decorators Caulk White 380ml",
+      "qty": 12
+    },
+    {
+      "code": "5101007",
+      "desc": "Quick-Set Filler 10kg",
+      "qty": 1
+    },
+    {
+      "code": "5101008",
+      "desc": "Aluminium Oxide Roll 60G 10m",
+      "qty": 1
+    },
+    {
+      "code": "5101009",
+      "desc": "Aluminium Oxide Roll 80G 10m",
+      "qty": 1
+    },
+    {
+      "code": "5101010",
+      "desc": "Aluminium Oxide Roll 120G 10m",
+      "qty": 3
+    },
+    {
+      "code": "5101011",
+      "desc": "Between-Coats Abrasive Roll 180G 10m",
+      "qty": 3
+    },
+    {
+      "code": "5101012",
+      "desc": "Medium Pile Microfibre Sleeve 9in",
+      "qty": 6
+    },
+    {
+      "code": "5101013",
+      "desc": "Trade Brush 2in",
+      "qty": 10
+    },
+    {
+      "code": "5101014",
+      "desc": "Medium Pile Woven Sleeve 10pk 4in",
+      "qty": 1
+    }
+  ]
+}

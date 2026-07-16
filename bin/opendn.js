@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+// opendn — put your delivery note's data into a QR code anyone can read.
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { buildPayload, parsePayload } = require('../src/payload');
+const { qrPngBuffer, qrInfo } = require('../src/qr');
+const { labelPdf } = require('../src/label');
+const { stampPdf } = require('../src/stamp');
+
+const HELP = `opendn — delivery-note QR toolkit (OpenDN v1, plain text)
+
+Usage:
+  opendn generate <note.json> [-o label.pdf] [--qr qr.png] [--payload payload.txt]
+      Build the payload from a note JSON file and render an A6 label PDF.
+
+  opendn stamp <note.pdf> <note.json> [-o stamped.pdf] [--page N] [--size MM]
+      Stamp the QR into the bottom-right zone of an existing delivery-note PDF.
+
+  opendn parse <payload.txt | ->
+      Parse a scanned payload back into JSON (reference parser for platforms).
+
+  opendn example
+      Print a template note.json to fill in.
+
+note.json fields:
+  note, date, supplier (required) · customer, deliverTo, ref, custRef,
+  account, weightKg (optional) · items: [{ code, desc, qty }] (required)`;
+
+function arg(args, flag, fallback) {
+  const i = args.indexOf(flag);
+  if (i === -1) return fallback;
+  const v = args[i + 1];
+  args.splice(i, 2);
+  return v;
+}
+
+function readNote(file) {
+  let note;
+  try { note = JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch (e) { throw new Error(`could not read ${file}: ${e.message}`); }
+  return note;
+}
+
+async function main() {
+  const [cmd, ...args] = process.argv.slice(2);
+
+  if (cmd === 'generate') {
+    const out = arg(args, '-o', 'label.pdf');
+    const qrOut = arg(args, '--qr', null);
+    const payloadOut = arg(args, '--payload', null);
+    if (!args[0]) throw new Error('usage: opendn generate <note.json> [-o label.pdf]');
+    const note = readNote(args[0]);
+    const payload = buildPayload(note);
+    fs.writeFileSync(out, await labelPdf(payload, note));
+    if (qrOut) fs.writeFileSync(qrOut, await qrPngBuffer(payload, 10));
+    if (payloadOut) fs.writeFileSync(payloadOut, payload);
+    const info = qrInfo(payload);
+    console.log(`${out} written — ${note.items.length} lines, payload ${payload.length} chars, QR v${info.version} EC ${info.ecLevel}`);
+    return;
+  }
+
+  if (cmd === 'stamp') {
+    const out = arg(args, '-o', 'stamped.pdf');
+    const pageN = parseInt(arg(args, '--page', '1'), 10);
+    const size = parseFloat(arg(args, '--size', '40'));
+    if (!args[0] || !args[1]) throw new Error('usage: opendn stamp <note.pdf> <note.json> [-o stamped.pdf]');
+    const note = readNote(args[1]);
+    const payload = buildPayload(note);
+    const stamped = await stampPdf(fs.readFileSync(args[0]), payload, note, { pageIndex: pageN - 1, qrMm: size });
+    fs.writeFileSync(out, stamped);
+    console.log(`${out} written — QR (${size} mm) stamped on page ${pageN}`);
+    return;
+  }
+
+  if (cmd === 'parse') {
+    if (!args[0]) throw new Error('usage: opendn parse <payload.txt | ->');
+    const text = args[0] === '-' ? fs.readFileSync(0, 'utf8') : fs.readFileSync(args[0], 'utf8');
+    console.log(JSON.stringify(parsePayload(text), null, 2));
+    return;
+  }
+
+  if (cmd === 'example') {
+    console.log(JSON.stringify({
+      note: 'DN10245876',
+      date: '2026-02-05 05:48',
+      supplier: 'Brightmoor Trade Supplies Ltd, 12 Foundry Lane, Milton Keynes MK9 1AA, T:01632 960812',
+      customer: 'Stonegate Construction Ltd, Unit 4, Harbour Business Park, Riverton RV2 4TQ',
+      deliverTo: 'Stonegate Site 12, 55 Meadow Way, Northbridge NB1 5GH, T:07700 900123',
+      ref: 'G123/SO45678901',
+      custRef: 'OAKFIELD0402-2026',
+      account: '456789',
+      weightKg: 111.55,
+      items: [
+        { code: '5101001', desc: 'Trade Satinwood Paint Light Tint 5L S1005-Y10R', qty: 3 },
+        { code: '5101006', desc: 'Decorators Caulk White 380ml', qty: 12 },
+      ],
+    }, null, 2));
+    return;
+  }
+
+  console.log(HELP);
+  process.exitCode = cmd && cmd !== '--help' && cmd !== '-h' ? 1 : 0;
+}
+
+main().catch((e) => { console.error(`error: ${e.message}`); process.exit(1); });
