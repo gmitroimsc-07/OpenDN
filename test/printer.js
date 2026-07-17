@@ -11,6 +11,7 @@ const { execFileSync } = require('child_process');
 const { brightmoorPdf } = require('./fixtures');
 const { loadConfig } = require('../src/config');
 const { watch } = require('../src/watch');
+const { serviceUnit } = require('../src/printer');
 
 const BACKEND = path.join(__dirname, '..', 'printer', 'opendn-backend');
 
@@ -67,6 +68,13 @@ function runBackend(args, { dest, stdin } = {}) {
   assert.strictEqual(results.processed.length, 3, 'all captured jobs stamped');
   assert.strictEqual(results.processed[0].note.note, 'DN10245876', 'captured job parsed by template');
   console.log('printer → watcher → stamped PDF OK');
+
+  // 6. the watcher-service unit file is generated correctly
+  const unit = serviceUnit({ nodeBin: '/usr/bin/node', opendnBin: '/opt/opendn/bin/opendn.js', input: '/data/in', output: '/data/out' });
+  assert.ok(unit.includes('ExecStart=/usr/bin/node /opt/opendn/bin/opendn.js watch /data/in /data/out'), 'ExecStart wired');
+  assert.ok(unit.includes('Restart=on-failure'), 'service restarts on failure');
+  assert.ok(unit.includes('WantedBy=default.target'), 'starts at login');
+  console.log('service unit generation OK');
 
   console.log('\nall printer tests passed');
 })().catch((e) => { console.error('FAILED:', e.stack || e.message); process.exit(1); });

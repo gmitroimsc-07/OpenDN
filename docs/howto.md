@@ -84,57 +84,64 @@ code — the whole note appears as readable text.
 
 ---
 
-## 3. Automatic mode — the watch folder
+## 3. The OpenDN printer — the everyday workflow (Linux/macOS)
 
-Doing that per note gets old, so let OpenDN watch a folder instead:
-
-```bash
-opendn watch in/ out/
-```
-
-Now **every PDF that lands in `in/` comes out stamped in `out/`**:
-
-- `out/NAME.stamped.pdf` — your document with the QR (print this one)
-- `out/NAME.stamped.payload.txt` — the payload as plain text
-- `out/archive/` — the original, untouched
-- `out/review/` — anything OpenDN couldn't parse, **untouched**, with a
-  `NAME.reason.txt` saying exactly why
-
-How do PDFs get into `in/`? Print with **Microsoft Print to PDF** (or any
-print-to-PDF) saving into that folder, point your ERP's PDF export there —
-or use the virtual printer (next section).
-
-`opendn watch in/ out/ --once` processes what's already there and exits —
-useful in scripts and scheduled tasks. Folders and defaults can also live
-in an `opendn.config.json` file.
-
-**Important:** the PDF must be *digitally produced* (printed or exported
-from software). OpenDN reads the PDF's text layer and never OCRs — a photo
-or scan of paper goes politely to `review/` instead of being guessed at.
-
----
-
-## 4. The OpenDN printer (Linux/macOS)
-
-The smoothest workflow: a real printer called **OpenDN** in every print
-dialog. Not every document is a delivery note — so nothing is captured
-automatically; you choose, per document, by picking the printer.
+Doing that per note gets old. The way OpenDN is meant to be used day to
+day is as **a real printer called OpenDN in every print dialog**. One-time
+setup:
 
 ```bash
 sudo opendn printer install --input ~/opendn/in
-opendn watch ~/opendn/in ~/opendn/out        # leave this running
 ```
 
-Print any delivery note from any application → choose **OpenDN** → the
-stamped PDF appears in `~/opendn/out` seconds later. Print it on paper
-from there. If you print something to OpenDN that isn't a delivery note,
-it lands untouched in `review/` — nothing is lost.
+That single command registers the printer *and* starts the stamping
+engine as a background service — there is nothing to keep running by
+hand. From then on:
 
-`opendn printer status` shows the queue; `sudo opendn printer uninstall`
-removes it. To keep the watcher running permanently, there's a systemd
-unit in [`printer.md`](printer.md). (Windows: use Microsoft Print to PDF
-into the watch folder for now — a native Windows printer is on the
-roadmap.)
+1. Open the delivery note in whatever produced it (ERP, LibreOffice,
+   browser…) and hit **Print**.
+2. Choose **OpenDN** as the printer.
+3. Seconds later, collect from `~/opendn/out`:
+   - `NAME.stamped.pdf` — your document with the QR (print this one on
+     your real printer)
+   - `NAME.stamped.payload.txt` — the payload as plain text
+   - `archive/` — the captured original, untouched
+   - `review/` — anything OpenDN couldn't parse, **untouched**, with a
+     `NAME.reason.txt` saying exactly why
+
+Not every document is a delivery note — so nothing is captured
+automatically. *You* choose, per document, by choosing the printer. And a
+misfire costs nothing: a non-delivery-note printed to OpenDN just sits
+untouched in `review/`.
+
+`opendn printer status` shows the queue and the service;
+`sudo opendn printer uninstall` removes everything. More (service logs,
+how it works inside): [`printer.md`](printer.md). Windows: a native
+OpenDN printer is on the roadmap — until then use the watch folder below
+with Microsoft Print to PDF.
+
+---
+
+## 4. The watch folder — other ways in
+
+The printer is a front door to a folder pipeline you can also feed
+directly — an ERP's scheduled PDF export, Microsoft Print to PDF on
+Windows, a script:
+
+```bash
+opendn watch in/ out/            # every PDF landing in in/ comes out stamped
+opendn watch in/ out/ --once     # process what's there now, then exit
+```
+
+Same outputs as above (`out/`, `archive/`, `review/`). This is exactly the
+engine the printer's background service runs for you — if you installed
+the printer, you never type this. Folders and defaults can also live in an
+`opendn.config.json` file.
+
+**Important:** however a PDF arrives, it must be *digitally produced*
+(printed or exported from software). OpenDN reads the PDF's text layer and
+never OCRs — a photo or scan of paper goes politely to `review/` instead
+of being guessed at.
 
 ---
 
@@ -226,12 +233,12 @@ document it couldn't understand.
 ## 9. Command cheat-sheet
 
 ```bash
+sudo opendn printer install --input DIR     # the printer + engine, one command
+opendn printer status | uninstall
 opendn example > note.json                  # template to fill in
 opendn generate note.json -o label.pdf      # A6 label with QR + summary
 opendn stamp doc.pdf note.json -o out.pdf   # QR onto an existing PDF
-opendn watch in/ out/ [--once]              # folder pipeline
-sudo opendn printer install --input DIR     # virtual printer (Linux/macOS)
-opendn printer status | uninstall
+opendn watch in/ out/ [--once]              # folder pipeline (no printer)
 opendn parse payload.txt                    # scanned text -> JSON
 npm test                                    # verify your installation
 ```

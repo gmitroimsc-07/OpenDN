@@ -78,47 +78,49 @@ The grammar is deliberately trivial — `KEY: value` header lines and
 language takes ~20 lines. Full rules in
 [`docs/payload-spec.md`](docs/payload-spec.md).
 
-## Automatic mode — the watcher
+## The OpenDN printer — the everyday workflow
 
-No JSON, no commands per note: point a folder watcher at wherever your
-delivery-note PDFs land and every one comes out stamped.
-
-```bash
-opendn watch in/ out/
-```
-
-Print with **Microsoft Print to PDF** (or any print-to-PDF) into `in/`, or
-point your ERP's PDF export there. Each PDF is read (text layer only — no
-OCR), parsed with a per-supplier template from [`templates/`](templates/)
-(see [`docs/templates.md`](docs/templates.md)) or a generic fallback, and:
-
-- `out/NAME.stamped.pdf` — your document with the QR stamped on it
-- `out/NAME.stamped.payload.txt` — the payload as text
-- `out/archive/` — the original, untouched
-- `out/review/` — anything unparseable, untouched, with a `.reason.txt`
-  explaining why (**fail-open**: nothing is ever blocked, guessed or
-  modified in place)
-
-Folders and defaults can live in `opendn.config.json`; `--once` processes
-what's already in the folder and exits (handy in scripts and scheduled
-tasks).
-
-## The OpenDN printer — print straight into the pipeline
-
-On Linux/macOS, skip even the print-to-PDF step: register a real printer
-that feeds the watcher directly.
+One-time setup (Linux/macOS):
 
 ```bash
 sudo opendn printer install --input ~/opendn/in
-opendn watch ~/opendn/in ~/opendn/out
 ```
 
-**OpenDN** now appears in every print dialog. Print a delivery note to it
-from any application and the stamped PDF drops into `~/opendn/out`. Only
-what you choose to print enters the pipeline — and anything that isn't a
-delivery note fails open to `review/` as an ordinary, untouched PDF. See
-[`docs/printer.md`](docs/printer.md) (including a systemd unit to keep the
-watcher running). Windows support is on the roadmap.
+That's it. **OpenDN** now appears in every print dialog, and the stamping
+engine runs as a background service. Print a delivery note to it from any
+application — your ERP, LibreOffice, a browser — and seconds later:
+
+- `~/opendn/out/NAME.stamped.pdf` — your document with the QR on it
+  (print this one on paper)
+- `~/opendn/out/NAME.stamped.payload.txt` — the payload as text
+- `~/opendn/out/archive/` — the captured original, untouched
+- `~/opendn/out/review/` — anything unparseable, untouched, with a
+  `.reason.txt` explaining why (**fail-open**: nothing is ever blocked,
+  guessed or modified in place)
+
+Not every document is a delivery note — so nothing is captured
+automatically. You choose, per document, by choosing the printer; and if
+you misfire, the PDF sits untouched in `review/`. Parsing rules per
+supplier are small JSON files in [`templates/`](templates/) (see
+[`docs/templates.md`](docs/templates.md)), with a generic fallback for
+common layouts. Details: [`docs/printer.md`](docs/printer.md). Windows
+support is on the roadmap.
+
+## The watch folder — other ways in
+
+The printer is a front door to a folder pipeline you can also feed
+directly — from an ERP's PDF export, Microsoft Print to PDF on Windows, or
+a script:
+
+```bash
+opendn watch in/ out/            # every PDF landing in in/ comes out stamped
+opendn watch in/ out/ --once     # process what's there now, then exit
+```
+
+(This is the engine the printer service runs for you — installing the
+printer means never typing this.) Each PDF is read from its text layer
+only — no OCR, scans are flagged to `review/`, never guessed. Folders and
+defaults can live in `opendn.config.json`.
 
 ## Exporting from your system
 

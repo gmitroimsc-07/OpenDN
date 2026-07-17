@@ -30,12 +30,14 @@ Usage:
       --once processes the files already there and exits. Folders and
       options can also live in opendn.config.json.
 
-  opendn printer install --input DIR [--name OpenDN]   (sudo, Linux/macOS)
-  opendn printer uninstall [--name OpenDN]             (sudo)
+  opendn printer install --input DIR [--output DIR] [--name OpenDN]  (sudo)
+  opendn printer uninstall [--name OpenDN]                           (sudo)
   opendn printer status
-      Register a real "OpenDN" printer (CUPS): anything printed to it from
-      any application lands as a PDF in the input folder for `opendn watch`
-      to stamp. Only what you choose to print enters the pipeline; anything
+      Register a real "OpenDN" printer (CUPS, Linux/macOS) and start the
+      stamping engine as a background service. After install there is
+      nothing else to run: print a delivery note to "OpenDN" from any
+      application and the stamped PDF appears in the output folder. You
+      choose what enters the pipeline by choosing the printer; anything
       that isn't a delivery note fails open to review/ as an ordinary PDF.
 
   opendn example
@@ -116,19 +118,26 @@ async function main() {
     const name = arg(args, '--name', 'OpenDN');
     if (sub === 'install') {
       const input = arg(args, '--input', null);
-      const r = printer.install({ name, input });
-      console.log(`printer "${r.name}" installed — capture folder: ${r.input}`);
-      console.log(`print anything to "${r.name}", then run: opendn watch ${r.input} <out-dir>`);
+      const output = arg(args, '--output', null);
+      const r = printer.install({ name, input, output });
+      console.log(`printer "${r.name}" installed — stamped PDFs will appear in: ${r.output}`);
+      if (r.service.installed) {
+        console.log(`watcher service running (${r.service.unit}) — just print to "${r.name}".`);
+      } else {
+        console.log(`could not start the watcher service (${r.service.why})`);
+        console.log(`run it yourself: opendn watch ${r.input} ${r.output}`);
+      }
       return;
     }
     if (sub === 'uninstall') {
       const r = printer.uninstall({ name });
-      console.log(`printer "${r.name}" removed${r.backendRemoved ? ' (backend removed too)' : ''}`);
+      console.log(`printer "${r.name}" removed${r.backendRemoved ? ', backend removed' : ''}${r.serviceRemoved ? ', watcher service removed' : ''}`);
       return;
     }
     if (sub === 'status') {
       const s = printer.status({ name });
       console.log(`backend installed: ${s.backendInstalled ? 'yes' : 'no'}`);
+      console.log(`watcher service: ${s.service}`);
       if (s.queues.length === 0) console.log('no OpenDN print queues registered');
       for (const q of s.queues) console.log(`queue "${q.name}" → ${q.input}`);
       return;

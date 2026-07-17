@@ -63,8 +63,9 @@ Build list:
 Register a printer that feeds the same pipeline directly (no manual
 "print to PDF" target selection). Same engine, new front door.
 
-- ✅ Linux/macOS: `opendn printer install` — CUPS backend + queue; jobs
-  printed to "OpenDN" land in the watch folder as PDFs (`docs/printer.md`).
+- ✅ Linux/macOS: `opendn printer install` — CUPS backend + queue, and the
+  stamping engine started as a background service in the same command:
+  print to "OpenDN", collect the stamped PDF (`docs/printer.md`).
 - ⬜ Windows: service wrapping an XPS/PDF port monitor. Until then:
   Microsoft Print to PDF targeting the watch folder.
 

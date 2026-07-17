@@ -13,16 +13,24 @@ a note explaining why, so nothing is ever lost or mangled.
 
 ```bash
 sudo opendn printer install --input /home/you/opendn/in
-opendn watch /home/you/opendn/in /home/you/opendn/out     # leave running
 ```
 
-The input path must be absolute, with no spaces (it becomes a CUPS device
-URI). Check or remove with:
+One command, done: it registers the printer **and** starts the stamping
+engine as a background service (a systemd user service that restarts on
+failure and starts at every login). Stamped PDFs appear in
+`/home/you/opendn/out` — set your own with `--output DIR`. Paths must be
+absolute, with no spaces (they become a CUPS device URI).
+
+Check or remove with:
 
 ```bash
-opendn printer status
-sudo opendn printer uninstall
+opendn printer status          # queue, backend and service state
+sudo opendn printer uninstall  # removes queue, backend and service
 ```
+
+If the service could not be set up (no systemd — e.g. macOS), the install
+says so and you run the engine yourself:
+`opendn watch /home/you/opendn/in /home/you/opendn/out`.
 
 ## Use
 
@@ -37,23 +45,15 @@ Print from anything — your ERP, LibreOffice, a browser — and pick
 Add per-supplier parsing rules as JSON files in `templates/` — see
 [`templates.md`](templates.md).
 
-## Keep the watcher running automatically (systemd)
+## The background service
 
-```ini
-# ~/.config/systemd/user/opendn-watch.service
-[Unit]
-Description=OpenDN watcher
-
-[Service]
-ExecStart=/usr/bin/env opendn watch /home/you/opendn/in /home/you/opendn/out
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-```
+`install` writes `~/.config/systemd/user/opendn-watch.service` for the
+user who ran sudo and enables it immediately. Useful commands:
 
 ```bash
-systemctl --user enable --now opendn-watch
+systemctl --user status opendn-watch     # is it running? recent log lines
+journalctl --user -u opendn-watch -f     # follow the stamping log live
+systemctl --user restart opendn-watch    # e.g. after adding a template
 ```
 
 ## How it works
