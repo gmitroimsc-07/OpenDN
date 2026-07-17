@@ -1,8 +1,9 @@
 # OpenDN Roadmap
 
-Where this project is going. Current state: **v0.2.0** — the core toolkit
-(payload builder/parser, QR generation, A6 label, PDF stamping, CLI) plus
-Milestone 1, the Watcher (`opendn watch`).
+Where this project is going. Current state: **v0.3.0** — the core toolkit
+(payload builder/parser, QR generation, A6 label, PDF stamping, CLI),
+Milestone 1, the Watcher (`opendn watch`), and Milestone 2, the virtual
+printer, on CUPS (`opendn printer install`, Linux/macOS).
 
 ## Design principles (settled — do not reopen without strong reason)
 
@@ -57,12 +58,15 @@ Build list:
 6. Tests: template parsing fixtures (fictional notes), end-to-end
    watch → stamped PDF, decode verification with zxing.
 
-## Milestone 2 — virtual printer input
+## Milestone 2 — virtual printer input (✅ CUPS shipped in v0.3.0)
 
 Register a printer that feeds the same pipeline directly (no manual
-"print to PDF" target selection): Windows service wrapping an XPS/PDF port
-monitor, or a local CUPS/IPP queue on macOS/Linux. Same engine, new front
-door.
+"print to PDF" target selection). Same engine, new front door.
+
+- ✅ Linux/macOS: `opendn printer install` — CUPS backend + queue; jobs
+  printed to "OpenDN" land in the watch folder as PDFs (`docs/printer.md`).
+- ⬜ Windows: service wrapping an XPS/PDF port monitor. Until then:
+  Microsoft Print to PDF targeting the watch folder.
 
 ## Milestone 3 — the network gateway (the full product)
 

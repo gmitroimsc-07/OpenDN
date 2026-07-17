@@ -98,8 +98,24 @@ OCR), parsed with a per-supplier template from [`templates/`](templates/)
 
 Folders and defaults can live in `opendn.config.json`; `--once` processes
 what's already in the folder and exits (handy in scripts and scheduled
-tasks). A true virtual printer — no print-to-PDF step at all — is next on
-the roadmap.
+tasks).
+
+## The OpenDN printer — print straight into the pipeline
+
+On Linux/macOS, skip even the print-to-PDF step: register a real printer
+that feeds the watcher directly.
+
+```bash
+sudo opendn printer install --input ~/opendn/in
+opendn watch ~/opendn/in ~/opendn/out
+```
+
+**OpenDN** now appears in every print dialog. Print a delivery note to it
+from any application and the stamped PDF drops into `~/opendn/out`. Only
+what you choose to print enters the pipeline — and anything that isn't a
+delivery note fails open to `review/` as an ordinary, untouched PDF. See
+[`docs/printer.md`](docs/printer.md) (including a systemd unit to keep the
+watcher running). Windows support is on the roadmap.
 
 ## Exporting from your system
 

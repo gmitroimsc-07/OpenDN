@@ -1,6 +1,6 @@
 {
   "name": "opendn",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenDN — the open delivery-note QR standard and toolkit: put the complete delivery note into a plain-text QR code anyone can read (OpenDN v1)",
   "license": "MIT",
   "repository": "github:gmitroimsc-07/OpenDN",
@@ -9,7 +9,7 @@
   },
   "main": "src/payload.js",
   "scripts": {
-    "test": "node test/smoke.js && node test/watch.js"
+    "test": "node test/smoke.js && node test/watch.js && node test/printer.js"
   },
   "engines": {
     "node": ">=18"

@@ -30,6 +30,14 @@ Usage:
       --once processes the files already there and exits. Folders and
       options can also live in opendn.config.json.
 
+  opendn printer install --input DIR [--name OpenDN]   (sudo, Linux/macOS)
+  opendn printer uninstall [--name OpenDN]             (sudo)
+  opendn printer status
+      Register a real "OpenDN" printer (CUPS): anything printed to it from
+      any application lands as a PDF in the input folder for `opendn watch`
+      to stamp. Only what you choose to print enters the pipeline; anything
+      that isn't a delivery note fails open to review/ as an ordinary PDF.
+
   opendn example
       Print a template note.json to fill in.
 
@@ -100,6 +108,32 @@ async function main() {
     });
     await watch(cfg, { once });
     return;
+  }
+
+  if (cmd === 'printer') {
+    const printer = require('../src/printer');
+    const sub = args.shift();
+    const name = arg(args, '--name', 'OpenDN');
+    if (sub === 'install') {
+      const input = arg(args, '--input', null);
+      const r = printer.install({ name, input });
+      console.log(`printer "${r.name}" installed — capture folder: ${r.input}`);
+      console.log(`print anything to "${r.name}", then run: opendn watch ${r.input} <out-dir>`);
+      return;
+    }
+    if (sub === 'uninstall') {
+      const r = printer.uninstall({ name });
+      console.log(`printer "${r.name}" removed${r.backendRemoved ? ' (backend removed too)' : ''}`);
+      return;
+    }
+    if (sub === 'status') {
+      const s = printer.status({ name });
+      console.log(`backend installed: ${s.backendInstalled ? 'yes' : 'no'}`);
+      if (s.queues.length === 0) console.log('no OpenDN print queues registered');
+      for (const q of s.queues) console.log(`queue "${q.name}" → ${q.input}`);
+      return;
+    }
+    throw new Error('usage: opendn printer <install|uninstall|status>');
   }
 
   if (cmd === 'parse') {
