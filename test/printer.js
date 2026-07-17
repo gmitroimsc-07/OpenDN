@@ -27,36 +27,45 @@ function runBackend(args, { dest, stdin } = {}) {
   const root = path.join(__dirname, 'out', 'printer');
   fs.rmSync(root, { recursive: true, force: true });
   const dest = path.join(root, 'in');
-
-  // 1. discovery mode (CUPS calls with no arguments at startup)
-  const discovery = runBackend([]);
-  assert.ok(discovery.startsWith('file opendn:/'), 'discovery line advertised');
-  console.log('discovery mode OK');
-
-  // 2. capture via stdin (5 args) — like a real filtered job
   const pdfBytes = await brightmoorPdf();
-  runBackend(['42', 'mgi', 'Delivery Note: DN 123/45', '1', ''], { dest, stdin: pdfBytes });
-  let files = fs.readdirSync(dest);
-  assert.strictEqual(files.length, 1, 'one file captured');
-  assert.ok(/^\d{8}-\d{6}-Delivery_Note_DN_123_45\.pdf$/.test(files[0]), `title sanitised: ${files[0]}`);
-  assert.deepStrictEqual(fs.readFileSync(path.join(dest, files[0])), pdfBytes, 'captured byte-identical');
-  console.log('stdin capture OK (title sanitised, byte-identical)');
 
-  // 3. capture via file argument (6 args) + collision-safe naming
-  const jobFile = path.join(root, 'job.pdf');
-  fs.writeFileSync(jobFile, pdfBytes);
-  runBackend(['43', 'mgi', 'Delivery Note: DN 123/45', '1', '', jobFile], { dest });
-  runBackend(['44', 'mgi', 'Delivery Note: DN 123/45', '1', '', jobFile], { dest });
-  files = fs.readdirSync(dest);
-  assert.strictEqual(files.length, 3, 'three captures, three files (no overwrite)');
-  assert.ok(files.every((f) => f.endsWith('.pdf')), 'no .part files left behind');
-  console.log('file-argument capture + unique naming OK');
+  if (process.platform === 'win32') {
+    // The CUPS backend is a POSIX sh script that never runs on Windows.
+    // Windows capture is the PDF driver writing into the folder — simulate
+    // exactly that, so the watcher stage below still runs for real.
+    fs.mkdirSync(dest, { recursive: true });
+    for (let n = 1; n <= 3; n++) fs.writeFileSync(path.join(dest, `job-${n}.pdf`), pdfBytes);
+    console.log('CUPS backend tests skipped on Windows (POSIX-only); capture simulated');
+  } else {
+    // 1. discovery mode (CUPS calls with no arguments at startup)
+    const discovery = runBackend([]);
+    assert.ok(discovery.startsWith('file opendn:/'), 'discovery line advertised');
+    console.log('discovery mode OK');
 
-  // 4. bad invocations fail loudly, good exit codes
-  assert.throws(() => runBackend(['1', 'u', 't'], { dest }), 'too few arguments rejected');
-  assert.throws(() => runBackend(['1', 'u', 't', '1', ''], { dest: undefined }), 'missing DEVICE_URI rejected');
-  assert.throws(() => runBackend(['1', 'u', 't', '1', ''], { dest: '/' }), 'empty capture folder rejected');
-  console.log('error handling OK');
+    // 2. capture via stdin (5 args) — like a real filtered job
+    runBackend(['42', 'mgi', 'Delivery Note: DN 123/45', '1', ''], { dest, stdin: pdfBytes });
+    let files = fs.readdirSync(dest);
+    assert.strictEqual(files.length, 1, 'one file captured');
+    assert.ok(/^\d{8}-\d{6}-Delivery_Note_DN_123_45\.pdf$/.test(files[0]), `title sanitised: ${files[0]}`);
+    assert.deepStrictEqual(fs.readFileSync(path.join(dest, files[0])), pdfBytes, 'captured byte-identical');
+    console.log('stdin capture OK (title sanitised, byte-identical)');
+
+    // 3. capture via file argument (6 args) + collision-safe naming
+    const jobFile = path.join(root, 'job.pdf');
+    fs.writeFileSync(jobFile, pdfBytes);
+    runBackend(['43', 'mgi', 'Delivery Note: DN 123/45', '1', '', jobFile], { dest });
+    runBackend(['44', 'mgi', 'Delivery Note: DN 123/45', '1', '', jobFile], { dest });
+    files = fs.readdirSync(dest);
+    assert.strictEqual(files.length, 3, 'three captures, three files (no overwrite)');
+    assert.ok(files.every((f) => f.endsWith('.pdf')), 'no .part files left behind');
+    console.log('file-argument capture + unique naming OK');
+
+    // 4. bad invocations fail loudly, good exit codes
+    assert.throws(() => runBackend(['1', 'u', 't'], { dest }), 'too few arguments rejected');
+    assert.throws(() => runBackend(['1', 'u', 't', '1', ''], { dest: undefined }), 'missing DEVICE_URI rejected');
+    assert.throws(() => runBackend(['1', 'u', 't', '1', ''], { dest: '/' }), 'empty capture folder rejected');
+    console.log('error handling OK');
+  }
 
   // 5. a captured job flows through the watcher end to end
   const cfg = loadConfig(null, {
