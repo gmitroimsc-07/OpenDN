@@ -7,6 +7,9 @@ Put the complete contents of a delivery note into a QR code that **anyone
 can read with any QR app** and **any platform can parse** — so the data
 survives damaged paperwork and nobody ever retypes a delivery note again.
 
+**New here? Start with the [How-to guide](docs/howto.md)** — install to
+first scannable note, step by step.
+
 - **Plain text, open format** — no encoding, no links, no vendor lock-in.
   See [`docs/payload-spec.md`](docs/payload-spec.md) (OpenDN v1).
 - **Damage-resilient** — error-correction level Q; the note still decodes
