@@ -84,11 +84,17 @@ code — the whole note appears as readable text.
 
 ---
 
-## 3. The OpenDN printer — the everyday workflow (Linux/macOS)
+## 3. The OpenDN printer — the everyday workflow
 
 Doing that per note gets old. The way OpenDN is meant to be used day to
 day is as **a real printer called OpenDN in every print dialog**. One-time
-setup:
+setup on Windows (terminal opened with *Run as administrator*):
+
+```powershell
+opendn printer install --input C:\opendn\in
+```
+
+or on Linux/macOS:
 
 ```bash
 sudo opendn printer install --input ~/opendn/in
@@ -115,18 +121,16 @@ misfire costs nothing: a non-delivery-note printed to OpenDN just sits
 untouched in `review/`.
 
 `opendn printer status` shows the queue and the service;
-`sudo opendn printer uninstall` removes everything. More (service logs,
-how it works inside): [`printer.md`](printer.md). Windows: a native
-OpenDN printer is on the roadmap — until then use the watch folder below
-with Microsoft Print to PDF.
+`printer uninstall` (admin/sudo) removes everything. More — service logs,
+platform notes, how it works inside: [`printer.md`](printer.md).
 
 ---
 
 ## 4. The watch folder — other ways in
 
 The printer is a front door to a folder pipeline you can also feed
-directly — an ERP's scheduled PDF export, Microsoft Print to PDF on
-Windows, a script:
+directly — an ERP's scheduled PDF export, any print-to-PDF tool saving
+into the folder, a script:
 
 ```bash
 opendn watch in/ out/            # every PDF landing in in/ comes out stamped
@@ -220,7 +224,7 @@ language takes ~20 lines. Full rules: [`payload-spec.md`](payload-spec.md).
 | PDF in `review/`, reason "could not find: …" | No template matched and the generic parser couldn't find those fields. Write a template for that supplier ([`templates.md`](templates.md)). |
 | `payload is N chars (max 1400…)` | The note is too big for one scannable QR. Shorten item descriptions, or split the note across two codes. |
 | `opendn: command not found` | Re-run `npm link` (possibly with `sudo`), or call `node bin/opendn.js …` from the repo. |
-| `printer install` says to run with sudo | Registering a CUPS backend needs root: `sudo opendn printer install …`. |
+| `printer install` complains about permissions | It changes system print config: use `sudo` (Linux/macOS) or a terminal opened with *Run as administrator* (Windows). |
 | QR won't scan off paper | Printed too small or too dense. Keep ≥ 40 mm; shorter payloads scan easier. |
 
 Every failure is fail-open by design: your original document is always

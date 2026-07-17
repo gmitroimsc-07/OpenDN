@@ -30,15 +30,17 @@ Usage:
       --once processes the files already there and exits. Folders and
       options can also live in opendn.config.json.
 
-  opendn printer install --input DIR [--output DIR] [--name OpenDN]  (sudo)
-  opendn printer uninstall [--name OpenDN]                           (sudo)
+  opendn printer install --input DIR [--output DIR] [--name OpenDN]
+  opendn printer uninstall [--name OpenDN]
   opendn printer status
-      Register a real "OpenDN" printer (CUPS, Linux/macOS) and start the
-      stamping engine as a background service. After install there is
-      nothing else to run: print a delivery note to "OpenDN" from any
-      application and the stamped PDF appears in the output folder. You
-      choose what enters the pipeline by choosing the printer; anything
-      that isn't a delivery note fails open to review/ as an ordinary PDF.
+      Register a real "OpenDN" printer and start the stamping engine as a
+      background service. Linux/macOS: run install/uninstall with sudo.
+      Windows: run them from an elevated (Run as administrator) terminal.
+      After install there is nothing else to run: print a delivery note
+      to "OpenDN" from any application and the stamped PDF appears in the
+      output folder. You choose what enters the pipeline by choosing the
+      printer; anything that isn't a delivery note fails open to review/
+      as an ordinary PDF.
 
   opendn example
       Print a template note.json to fill in.
@@ -136,6 +138,7 @@ async function main() {
     }
     if (sub === 'status') {
       const s = printer.status({ name });
+      if (s.raw !== undefined) { console.log(s.raw); return; }
       console.log(`backend installed: ${s.backendInstalled ? 'yes' : 'no'}`);
       console.log(`watcher service: ${s.service}`);
       if (s.queues.length === 0) console.log('no OpenDN print queues registered');

@@ -1,13 +1,27 @@
-// The OpenDN virtual printer (Milestone 2, CUPS — Linux/macOS): registers a
-// print queue whose backend drops every job, rendered to PDF by CUPS, into
-// the watch folder. Print anything to "OpenDN" from any application and
-// `opendn watch` stamps it; non-delivery-notes fail-open to review/ as
-// ordinary PDFs. The Windows port (XPS port monitor) is still on the roadmap.
+// The OpenDN virtual printer (Milestone 2): registers a print queue that
+// drops every job, rendered to PDF, into the watch folder, and starts the
+// stamping engine in the background. Print anything to "OpenDN" from any
+// application; non-delivery-notes fail-open to review/ as ordinary PDFs.
+//
+// Linux/macOS: CUPS backend + queue, engine as a systemd user service.
+// Windows: printer port that is a file path + the built-in "Microsoft
+//   Print To PDF" driver + engine as a hidden Scheduled Task. Known
+//   limitation: all jobs capture to one filename (capture.pdf), so the
+//   job title is lost and truly simultaneous prints can collide — the
+//   engine clears the file within seconds. A local IPP server (Milestone
+//   3 technology) will lift this.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+
+function install(opts) { return process.platform === 'win32' ? winInstall(opts) : cupsInstall(opts); }
+function uninstall(opts) { return process.platform === 'win32' ? winUninstall(opts) : cupsUninstall(opts); }
+function status(opts) { return process.platform === 'win32' ? winStatus(opts) : cupsStatus(opts); }
+
+// ---------------------------------------------------------------------------
+// Linux/macOS — CUPS
 
 const BACKEND_DIR = '/usr/lib/cups/backend';
 const BACKEND_PATH = path.join(BACKEND_DIR, 'opendn');
@@ -32,7 +46,7 @@ function checkCups() {
  * watcher as a background service, so after install there is nothing else
  * to run: print to "OpenDN", collect the stamped PDF from the output folder.
  */
-function install({ name = 'OpenDN', input, output }) {
+function cupsInstall({ name = 'OpenDN', input, output }) {
   requireRoot('install');
   checkCups();
   if (!input) throw new Error('an input folder is required: opendn printer install --input <dir>');
@@ -143,7 +157,7 @@ function userSystemctl(user, uid, args) {
 }
 
 /** Remove queue + watcher service; remove the backend once no queue is left. */
-function uninstall({ name = 'OpenDN' } = {}) {
+function cupsUninstall({ name = 'OpenDN' } = {}) {
   requireRoot('uninstall');
   execFileSync('lpadmin', ['-x', name], { stdio: ['ignore', 'inherit', 'inherit'] });
   const serviceRemoved = removeService();
@@ -165,7 +179,7 @@ function listQueues() {
   return queues;
 }
 
-function status({ name = 'OpenDN' } = {}) {
+function cupsStatus({ name = 'OpenDN' } = {}) {
   const queues = listQueues();
   const queue = queues.find((q) => q.name === name) || null;
   let service = 'unknown';
@@ -177,4 +191,101 @@ function status({ name = 'OpenDN' } = {}) {
   return { queue, queues, backendInstalled: fs.existsSync(BACKEND_PATH), service };
 }
 
-module.exports = { install, uninstall, status, listQueues, serviceUnit, BACKEND_PATH };
+// ---------------------------------------------------------------------------
+// Windows — built-in "Microsoft Print To PDF" driver + a printer port that
+// is a file path (so no save dialog), engine as a SYSTEM Scheduled Task.
+// Everything is driven through PowerShell; the script generators are pure
+// functions so they can be tested on any platform.
+
+const WIN_TASK = 'OpenDN Watch';
+const WIN_DRIVER = 'Microsoft Print To PDF';
+
+/** Reject characters that could escape our single-quoted PowerShell strings. */
+function psSafe(value, what) {
+  if (/['"`$\r\n]/.test(value)) {
+    throw new Error(`${what} may not contain quotes, backticks or $: ${value}`);
+  }
+  return value;
+}
+
+function winInstallScript({ name, input, output, port, nodeBin, opendnBin }) {
+  [name, input, output, port, nodeBin, opendnBin].forEach((v, i) =>
+    psSafe(v, ['printer name', 'input', 'output', 'port', 'node path', 'opendn path'][i]));
+  return `$ErrorActionPreference = 'Stop'
+$id = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $id.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+  Write-Error 'opendn printer install must be run from an elevated (Run as administrator) terminal'
+}
+New-Item -ItemType Directory -Force -Path '${input}', '${output}' | Out-Null
+if (-not (Get-PrinterPort -Name '${port}' -ErrorAction SilentlyContinue)) {
+  Add-PrinterPort -Name '${port}'
+}
+if (-not (Get-Printer -Name '${name}' -ErrorAction SilentlyContinue)) {
+  Add-Printer -Name '${name}' -DriverName '${WIN_DRIVER}' -PortName '${port}'
+}
+$action = New-ScheduledTaskAction -Execute '${nodeBin}' -Argument '"${opendnBin}" watch "${input}" "${output}"'
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount
+$settings = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+Register-ScheduledTask -TaskName '${WIN_TASK}' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+Start-ScheduledTask -TaskName '${WIN_TASK}'
+Write-Output 'installed'
+`;
+}
+
+function winUninstallScript({ name }) {
+  psSafe(name, 'printer name');
+  return `$ErrorActionPreference = 'Stop'
+Unregister-ScheduledTask -TaskName '${WIN_TASK}' -Confirm:$false -ErrorAction SilentlyContinue
+$p = Get-Printer -Name '${name}' -ErrorAction SilentlyContinue
+if ($p) {
+  $port = $p.PortName
+  Remove-Printer -Name '${name}'
+  Start-Sleep -Seconds 1
+  Remove-PrinterPort -Name $port -ErrorAction SilentlyContinue
+}
+Write-Output 'removed'
+`;
+}
+
+function winStatusScript({ name }) {
+  psSafe(name, 'printer name');
+  return `$p = Get-Printer -Name '${name}' -ErrorAction SilentlyContinue
+if ($p) { Write-Output ('queue "' + $p.Name + '" -> ' + $p.PortName) } else { Write-Output 'no ${name} printer registered' }
+$t = Get-ScheduledTask -TaskName '${WIN_TASK}' -ErrorAction SilentlyContinue
+if ($t) { Write-Output ('watcher task: ' + $t.State) } else { Write-Output 'watcher task: not installed' }
+`;
+}
+
+function powershell(script) {
+  return execFileSync('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script,
+  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+}
+
+function winInstall({ name = 'OpenDN', input, output }) {
+  if (!input) throw new Error('an input folder is required: opendn printer install --input <dir>');
+  input = path.resolve(input);
+  output = path.resolve(output || path.join(path.dirname(input), 'out'));
+  const port = path.join(input, 'capture.pdf');
+  powershell(winInstallScript({
+    name, input, output, port,
+    nodeBin: process.execPath,
+    opendnBin: path.join(__dirname, '..', 'bin', 'opendn.js'),
+  }));
+  return { name, input, output, service: { installed: true, unit: `Scheduled Task "${WIN_TASK}"` } };
+}
+
+function winUninstall({ name = 'OpenDN' } = {}) {
+  powershell(winUninstallScript({ name }));
+  return { name, backendRemoved: true, serviceRemoved: true };
+}
+
+function winStatus({ name = 'OpenDN' } = {}) {
+  return { raw: powershell(winStatusScript({ name })).trim() };
+}
+
+module.exports = {
+  install, uninstall, status, listQueues, serviceUnit, BACKEND_PATH,
+  winInstallScript, winUninstallScript, winStatusScript,
+};

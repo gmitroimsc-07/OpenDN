@@ -80,7 +80,13 @@ language takes ~20 lines. Full rules in
 
 ## The OpenDN printer — the everyday workflow
 
-One-time setup (Linux/macOS):
+One-time setup — Windows (terminal opened with *Run as administrator*):
+
+```powershell
+opendn printer install --input C:\opendn\in
+```
+
+Linux/macOS:
 
 ```bash
 sudo opendn printer install --input ~/opendn/in
@@ -103,14 +109,13 @@ automatically. You choose, per document, by choosing the printer; and if
 you misfire, the PDF sits untouched in `review/`. Parsing rules per
 supplier are small JSON files in [`templates/`](templates/) (see
 [`docs/templates.md`](docs/templates.md)), with a generic fallback for
-common layouts. Details: [`docs/printer.md`](docs/printer.md). Windows
-support is on the roadmap.
+common layouts. Details and platform notes:
+[`docs/printer.md`](docs/printer.md).
 
 ## The watch folder — other ways in
 
 The printer is a front door to a folder pipeline you can also feed
-directly — from an ERP's PDF export, Microsoft Print to PDF on Windows, or
-a script:
+directly — from an ERP's PDF export or a script:
 
 ```bash
 opendn watch in/ out/            # every PDF landing in in/ comes out stamped

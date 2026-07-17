@@ -1,4 +1,4 @@
-# The OpenDN virtual printer (Linux / macOS)
+# The OpenDN virtual printer
 
 Milestone 2: a real printer called **OpenDN** in every application's print
 dialog. Print a delivery note to it and the stamped PDF appears in the
@@ -9,7 +9,34 @@ printers are untouched. And if something printed to OpenDN turns out not to
 be a delivery note, it fails open: the PDF lands untouched in `review/` with
 a note explaining why, so nothing is ever lost or mangled.
 
-## Install
+## Install — Windows
+
+From a terminal opened with **Run as administrator** (PowerShell or cmd):
+
+```powershell
+opendn printer install --input C:\opendn\in
+```
+
+One command: it creates a printer named **OpenDN** using Windows'
+built-in *Microsoft Print To PDF* driver on a port that writes straight
+into the capture folder (no save dialog), and registers the stamping
+engine as a Scheduled Task (runs hidden as SYSTEM, starts with the
+machine, restarts on failure). Stamped PDFs appear in `C:\opendn\out`
+(change with `--output`).
+
+```powershell
+opendn printer status               # printer, port and task state
+opendn printer uninstall            # removes printer, port and task (admin)
+```
+
+**Known limitation** of the Windows capture path: every job is written to
+the same file (`capture.pdf`), so the document title doesn't carry into
+the output filename, and two jobs printed at exactly the same moment can
+collide — the engine clears the file within a couple of seconds, so in
+normal use this doesn't bite. A local IPP print server (the Milestone 3
+gateway technology) will remove this limitation.
+
+## Install — Linux / macOS
 
 ```bash
 sudo opendn printer install --input /home/you/opendn/in
@@ -71,6 +98,8 @@ Documents printed from applications carry a digital text layer, which is
 exactly what the no-OCR parser needs — the virtual printer and the watcher
 are two halves of the same design.
 
-**Windows** (XPS port monitor wrapping the same pipeline) is still on the
-roadmap; until then Windows users can point *Microsoft Print to PDF* at the
-input folder.
+On **Windows** there is no CUPS: install instead creates a printer port
+that is a file path inside the capture folder and binds the built-in
+*Microsoft Print To PDF* driver to it — printing renders the PDF directly
+to that path with no dialog. The engine runs as a Scheduled Task. Same
+pipeline, different plumbing.

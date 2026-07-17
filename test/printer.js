@@ -11,7 +11,7 @@ const { execFileSync } = require('child_process');
 const { brightmoorPdf } = require('./fixtures');
 const { loadConfig } = require('../src/config');
 const { watch } = require('../src/watch');
-const { serviceUnit } = require('../src/printer');
+const { serviceUnit, winInstallScript, winUninstallScript, winStatusScript } = require('../src/printer');
 
 const BACKEND = path.join(__dirname, '..', 'printer', 'opendn-backend');
 
@@ -75,6 +75,27 @@ function runBackend(args, { dest, stdin } = {}) {
   assert.ok(unit.includes('Restart=on-failure'), 'service restarts on failure');
   assert.ok(unit.includes('WantedBy=default.target'), 'starts at login');
   console.log('service unit generation OK');
+
+  // 7. Windows PowerShell script generation (scripts run on Windows only;
+  //    their construction is verified everywhere)
+  const win = {
+    name: 'OpenDN',
+    input: 'C:\\opendn\\in',
+    output: 'C:\\opendn\\out',
+    port: 'C:\\opendn\\in\\capture.pdf',
+    nodeBin: 'C:\\Program Files\\nodejs\\node.exe',
+    opendnBin: 'C:\\opendn\\OpenDN\\bin\\opendn.js',
+  };
+  const ps = winInstallScript(win);
+  assert.ok(ps.includes("Add-PrinterPort -Name 'C:\\opendn\\in\\capture.pdf'"), 'file-path port added');
+  assert.ok(ps.includes("-DriverName 'Microsoft Print To PDF'"), 'built-in PDF driver used');
+  assert.ok(ps.includes("New-ScheduledTaskAction -Execute 'C:\\Program Files\\nodejs\\node.exe'"), 'spaces in node path survive');
+  assert.ok(ps.includes('watch "C:\\opendn\\in" "C:\\opendn\\out"'), 'engine watches the right folders');
+  assert.ok(ps.includes('WindowsBuiltInRole]::Administrator'), 'elevation is checked');
+  assert.ok(winUninstallScript({ name: 'OpenDN' }).includes('Unregister-ScheduledTask'), 'uninstall removes the task');
+  assert.ok(winStatusScript({ name: 'OpenDN' }).includes('Get-Printer'), 'status queries the printer');
+  assert.throws(() => winInstallScript({ ...win, input: "C:\\o'; Remove-Item x" }), 'quote injection rejected');
+  console.log('Windows install/uninstall/status script generation OK');
 
   console.log('\nall printer tests passed');
 })().catch((e) => { console.error('FAILED:', e.stack || e.message); process.exit(1); });
