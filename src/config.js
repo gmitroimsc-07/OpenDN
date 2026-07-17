@@ -36,8 +36,14 @@ function loadConfig(configPath, overrides = {}) {
   if (unknown.length > 0) throw new Error(`unknown config option(s): ${unknown.join(', ')}`);
 
   const cfg = { ...DEFAULTS, ...fileValues, ...prune(overrides) };
+  const templatesExplicit = 'templates' in fileValues || overrides.templates != null;
   for (const key of ['input', 'output', 'templates']) {
     cfg[key] = path.resolve(baseDir, cfg[key]);
+  }
+  // no ./templates here and none configured → fall back to the ones that
+  // ship with the package (matters when running as a service, cwd = $HOME)
+  if (!templatesExplicit && !fs.existsSync(cfg.templates)) {
+    cfg.templates = path.join(__dirname, '..', 'templates');
   }
   cfg.archive = path.resolve(baseDir, cfg.archive || path.join(cfg.output, 'archive'));
   cfg.review = path.resolve(baseDir, cfg.review || path.join(cfg.output, 'review'));
