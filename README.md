@@ -96,9 +96,10 @@ That's it. **OpenDN** now appears in every print dialog, and the stamping
 engine runs as a background service. Print a delivery note to it from any
 application — your ERP, LibreOffice, a browser — and seconds later:
 
-- `~/opendn/out/NAME.stamped.pdf` — your document with the QR on it
-  (print this one on paper)
-- `~/opendn/out/NAME.stamped.payload.txt` — the payload as text
+- `~/opendn/out/NAME-20260205-054800.stamped.pdf` — your document with
+  the QR on it, date+time in the name so every print is unique (print
+  this one on paper)
+- a `.payload.txt` beside it — the payload as text
 - `~/opendn/out/archive/` — the captured original, untouched
 - `~/opendn/out/review/` — anything unparseable, untouched, with a
   `.reason.txt` explaining why (**fail-open**: nothing is ever blocked,

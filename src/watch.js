@@ -28,13 +28,16 @@ async function processPdf(file, cfg, templates) {
   const payload = buildPayload(note);
   const stamped = await stampPdf(bytes, payload, note, { pageIndex: cfg.page - 1, qrMm: cfg.qrMm });
 
-  const base = path.basename(file, path.extname(file));
+  // date+time on every output name: each print is unique (the Windows
+  // port captures every job as capture.pdf), and archive pairs with output
+  let base = path.basename(file, path.extname(file));
+  if (cfg.timestampNames) base += `-${timestamp()}`;
   const outPdf = uniquePath(path.join(cfg.output, `${base}${cfg.stampedSuffix}.pdf`));
   fs.writeFileSync(outPdf, stamped);
   if (cfg.writePayload) {
     fs.writeFileSync(outPdf.replace(/\.pdf$/, '.payload.txt'), payload);
   }
-  moveFile(file, uniquePath(path.join(cfg.archive, path.basename(file))));
+  moveFile(file, uniquePath(path.join(cfg.archive, `${base}${path.extname(file)}`)));
   return { outPdf, note, payload, template: tpl ? tpl.name : 'generic' };
 }
 
@@ -94,6 +97,11 @@ async function watch(cfg, { once = false, log = console.log } = {}) {
   watcher.on('error', (err) => log(`⚠ watcher error: ${err.message}`));
   log('watching for PDFs — Ctrl-C to stop');
   return new Promise(() => {}); // runs until interrupted
+}
+
+function timestamp(now = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
 }
 
 function uniquePath(target) {

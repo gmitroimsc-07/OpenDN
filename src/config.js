@@ -15,6 +15,7 @@ const DEFAULTS = {
   page: 1,
   writePayload: true,   // also save <name>.payload.txt next to the stamped PDF
   stampedSuffix: '.stamped',
+  timestampNames: true, // append -YYYYMMDD-HHMMSS so every print is unique
 };
 
 /**

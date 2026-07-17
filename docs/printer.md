@@ -29,12 +29,14 @@ opendn printer status               # printer, port and task state
 opendn printer uninstall            # removes printer, port and task (admin)
 ```
 
-**Known limitation** of the Windows capture path: every job is written to
-the same file (`capture.pdf`), so the document title doesn't carry into
-the output filename, and two jobs printed at exactly the same moment can
-collide — the engine clears the file within a couple of seconds, so in
-normal use this doesn't bite. A local IPP print server (the Milestone 3
-gateway technology) will remove this limitation.
+Every output name carries the print's date and time
+(`capture-20260717-153012.stamped.pdf`), so files are unique and sort
+chronologically. **Known limitation** of the Windows capture path: jobs
+are captured through a single `capture.pdf`, so the document *title*
+doesn't carry into the filename, and two jobs printed at exactly the same
+moment can collide at capture — the engine clears the file within a
+couple of seconds, so in normal use this doesn't bite. A local IPP print
+server (the Milestone 3 gateway technology) will remove this limitation.
 
 ## Install — Linux / macOS
 

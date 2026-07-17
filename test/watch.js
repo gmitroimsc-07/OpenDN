@@ -60,19 +60,20 @@ const { brightmoorPdf, unknownSupplierPdf, noTextPdf } = require('./fixtures');
   assert.strictEqual(gen.note.items[0].code, '7734001', 'generic: item code');
   console.log('generic fallback OK (unknown supplier fixture)');
 
-  // 3. outputs on disk: stamped PDFs + payload text, originals archived
+  // 3. outputs on disk: stamped PDFs + payload text (date+time in every
+  //    name so prints never collide), originals archived under paired names
   for (const r of results.processed) {
     assert.ok(fs.existsSync(r.outPdf), `stamped PDF exists: ${r.outPdf}`);
     assert.ok(fs.statSync(r.outPdf).size > 10_000, 'stamped PDF has content');
+    assert.ok(/-\d{8}-\d{6}\.stamped\.pdf$/.test(r.outPdf), `output name carries date+time: ${r.outPdf}`);
     const payloadFile = r.outPdf.replace(/\.pdf$/, '.payload.txt');
     assert.strictEqual(fs.readFileSync(payloadFile, 'utf8'), r.payload, 'payload .txt matches');
   }
-  assert.deepStrictEqual(
-    fs.readdirSync(cfg.archive).sort(),
-    ['brightmoor-note.pdf', 'unknown-supplier.pdf'],
-    'originals moved to archive/'
-  );
-  console.log('outputs OK (stamped PDFs, payload .txt, archive/)');
+  const archived = fs.readdirSync(cfg.archive).sort();
+  assert.strictEqual(archived.length, 2, 'both originals archived');
+  assert.ok(/^brightmoor-note-\d{8}-\d{6}\.pdf$/.test(archived[0]), `archive name pairs with output: ${archived[0]}`);
+  assert.ok(/^unknown-supplier-\d{8}-\d{6}\.pdf$/.test(archived[1]), `archive name pairs with output: ${archived[1]}`);
+  console.log('outputs OK (stamped PDFs, payload .txt, timestamped names, archive/)');
 
   // 4. payload round-trips and its QR decodes byte-identical (zxing)
   const parsed = parsePayload(bm.payload);

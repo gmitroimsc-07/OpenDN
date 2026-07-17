@@ -108,9 +108,10 @@ hand. From then on:
    browser…) and hit **Print**.
 2. Choose **OpenDN** as the printer.
 3. Seconds later, collect from `~/opendn/out`:
-   - `NAME.stamped.pdf` — your document with the QR (print this one on
-     your real printer)
-   - `NAME.stamped.payload.txt` — the payload as plain text
+   - `NAME-20260205-054800.stamped.pdf` — your document with the QR,
+     stamped with the print's date and time so every file is unique
+     (print this one on your real printer)
+   - a `.payload.txt` beside it — the payload as plain text
    - `archive/` — the captured original, untouched
    - `review/` — anything OpenDN couldn't parse, **untouched**, with a
      `NAME.reason.txt` saying exactly why
