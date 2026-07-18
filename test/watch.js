@@ -15,6 +15,7 @@ const { parsePayload } = require('../src/payload');
 const { qrPngBuffer } = require('../src/qr');
 const { decodePng } = require('./decode');
 const { brightmoorPdf, unknownSupplierPdf, noTextPdf } = require('./fixtures');
+const { genericParse } = require('../src/template');
 
 (async () => {
   const root = path.join(__dirname, 'out', 'watch');
@@ -97,6 +98,25 @@ const { brightmoorPdf, unknownSupplierPdf, noTextPdf } = require('./fixtures');
   assert.ok(reason.includes('no text layer'), 'reason file explains why');
   assert.strictEqual(fs.readdirSync(cfg.input).length, 0, 'input folder is drained');
   console.log('fail-open OK (no-text PDF → review/ + reason, byte-identical)');
+
+  // 6. generic parser: downloadable-template conventions — [bracketed] note
+  //    numbers, month-name dates, multi-numeric-column item tables
+  const web = genericParse([
+    'Anytown Trading Co  Delivery Note',
+    'Order Date  July 18, 2026',
+    'Delivery Note #  [100]',
+    'Item #  Description  Ordered  Delivered  Outstanding',
+    '55145  Product 1  12  12  0',
+    '55155  Product 2  5  5  0',
+  ]);
+  assert.strictEqual(web.note, '100', 'bracketed note number captured');
+  assert.strictEqual(web.date, 'July 18, 2026', 'month-name date captured');
+  assert.strictEqual(web.supplier, 'Anytown Trading Co', 'doc title stripped from letterhead line');
+  assert.deepStrictEqual(web.items, [
+    { code: '55145', desc: 'Product 1', qty: 12 },
+    { code: '55155', desc: 'Product 2', qty: 5 },
+  ], 'multi-column table: clean desc, first numeric column is qty');
+  console.log('generic parse of web-template conventions OK');
 
   console.log('\nall watcher tests passed');
 })().catch((e) => { console.error('FAILED:', e.stack || e.message); process.exit(1); });

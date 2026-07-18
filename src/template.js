@@ -97,13 +97,22 @@ function parseQty(text, source) {
 // it finds a note number, a date and at least one item line; anything less
 // throws so the fail-open path sends the PDF to review/ instead of guessing.
 
-// the captured reference must contain a digit so plain words never qualify
+// the captured reference must contain a digit so plain words never qualify;
+// [brackets] around the value (common in downloadable templates) are allowed
 const NOTE_RES = [
-  /(?:DELIVERY|DESPATCH)\s*NOTE\s*(?:No\.?|Number|#)?\s*:?\s*((?=[A-Z0-9/-]*[0-9])[A-Z0-9][A-Z0-9/-]{3,})/i,
+  /(?:DELIVERY|DESPATCH)\s*NOTE\s*(?:No\.?|Number|#)?\s*:?\s*\[?((?=[A-Z0-9/-]*[0-9])[A-Z0-9][A-Z0-9/-]{2,})\]?/i,
   /\b(DN[0-9]{4,})\b/,
 ];
-const DATE_RE = /\b([0-9]{1,2}[/.-][0-9]{1,2}[/.-][0-9]{2,4}(?:\s+[0-9]{1,2}:[0-9]{2})?|[0-9]{4}-[0-9]{2}-[0-9]{2}(?:\s+[0-9]{2}:[0-9]{2})?)\b/;
-const ITEM_RE = /^(\S{2,})\s{2,}(\S.{2,}?)\s{2,}([0-9]+(?:\.[0-9]+)?)$/;
+const MONTHS = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*';
+const DATE_RE = new RegExp(
+  '\\b([0-9]{1,2}[/.-][0-9]{1,2}[/.-][0-9]{2,4}(?:\\s+[0-9]{1,2}:[0-9]{2})?' + // 05/02/2026 05:48
+  '|[0-9]{4}-[0-9]{2}-[0-9]{2}(?:\\s+[0-9]{2}:[0-9]{2})?' +                    // 2026-02-05
+  `|${MONTHS} [0-9]{1,2},? [0-9]{4}` +                                          // July 18, 2026
+  `|[0-9]{1,2} ${MONTHS} [0-9]{4})\\b`, 'i');                                   // 18 July 2026
+// desc is lazy and the numeric tail is anchored, so multi-column tables
+// (Ordered/Delivered/Outstanding) keep the description clean; the FIRST
+// numeric column is taken as the quantity
+const ITEM_RE = /^(\S{2,})\s{2,}(\S.*?)\s{2,}([0-9]+(?:\.[0-9]+)?)(?:\s{2,}[0-9]+(?:\.[0-9]+)?)*$/;
 
 function genericParse(lines) {
   const text = lines.join('\n');
@@ -114,7 +123,9 @@ function genericParse(lines) {
   }
   const date = text.match(DATE_RE);
   if (date) note.date = date[1];
-  note.supplier = (lines.find((l) => l.trim().length >= 3) || '').trim();
+  note.supplier = (lines.find((l) => l.trim().length >= 3) || '')
+    .replace(/\s*(?:Delivery|Despatch)\s*Note\s*$/i, '')  // letterhead lines often end with the doc title
+    .trim();
 
   // the longest run of consecutive item-shaped lines is taken as the table
   let best = [];
