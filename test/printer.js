@@ -46,7 +46,7 @@ function runBackend(args, { dest, stdin } = {}) {
     runBackend(['42', 'mgi', 'Delivery Note: DN 123/45', '1', ''], { dest, stdin: pdfBytes });
     let files = fs.readdirSync(dest);
     assert.strictEqual(files.length, 1, 'one file captured');
-    assert.ok(/^\d{8}-\d{6}-Delivery_Note_DN_123_45\.pdf$/.test(files[0]), `title sanitised: ${files[0]}`);
+    assert.strictEqual(files[0], 'Delivery_Note_DN_123_45.pdf', `title sanitised: ${files[0]}`);
     assert.deepStrictEqual(fs.readFileSync(path.join(dest, files[0])), pdfBytes, 'captured byte-identical');
     console.log('stdin capture OK (title sanitised, byte-identical)');
 
