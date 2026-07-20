@@ -47,6 +47,9 @@ CO2E-KG: 18.42
    and embodied carbon (kg CO2e) — data the delivery system may know even
    when it is not printed on the page. `kgCO2e` requires `kg`. Values
    never contain `|` or line breaks (the writer strips them).
+   **These values are supplied by the sender.** OpenDN never calculates,
+   estimates or looks anything up — the payload duplicates exactly what
+   the sending system provides, nothing more.
 5. **`WEIGHT-KG: x`** (optional) and **`CO2E-KG: x`** (optional) close the
    payload with note totals.
 6. Dates are `YYYY-MM-DD` optionally followed by ` HH:MM`.

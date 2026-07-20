@@ -82,8 +82,14 @@ defaults can live in `opendn.config.json`.
 Skip document parsing entirely: feed OpenDN the note's data straight from
 your system and the payload is exact by construction — including
 **per-item weight (kg) and embodied carbon (kgCO2e) even when they're not
-printed on the page**. Describe the note as JSON (template:
-`opendn example > note.json`):
+printed on the page**.
+
+> **OpenDN calculates nothing.** It never computes, estimates or looks up
+> a weight or a carbon factor — it only duplicates, exactly, the values
+> the sender chooses to supply. If your system doesn't have them, leave
+> the fields out and the payload simply doesn't carry them.
+
+Describe the note as JSON (template: `opendn example > note.json`):
 
 ```json
 {
@@ -110,6 +116,14 @@ opendn stamp delivery-note.pdf note.json -o stamped.pdf
 Most ERP/accounts systems can export delivery notes as CSV or JSON — map
 the export to these fields and call `opendn` from a script or scheduled
 task at print time.
+
+This is what a delivery note built this way can look like — per-item
+weights and carbon in the item table, totals in the summary box, and the
+whole note (including both) inside the stamped QR
+([the PDF itself is in `examples/`](examples/example-delivery-note.pdf);
+entirely fictional data):
+
+![Example delivery note with per-item kg and kgCO2e and a stamped OpenDN QR](docs/example-delivery-note.png)
 
 ## For receiving platforms
 

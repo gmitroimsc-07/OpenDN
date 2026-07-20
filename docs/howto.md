@@ -56,11 +56,15 @@ Edit `note.json` — the fields are:
 | `note` | ✅ | `"DN10245876"` — the delivery-note number |
 | `date` | ✅ | `"2026-02-05 05:48"` |
 | `supplier` | ✅ | name + address + phone, one string |
-| `items` | ✅ | array of `{ "code", "desc", "qty" }` |
+| `items` | ✅ | array of `{ "code", "desc", "qty" }` — optionally add `"kg"` (line weight) and `"kgCO2e"` (line embodied carbon) |
 | `customer` | — | invoice-to name and address |
 | `deliverTo` | — | site address the goods go to |
 | `ref`, `custRef`, `account` | — | order / customer references |
-| `weightKg` | — | total weight, e.g. `111.55` |
+| `weightKg`, `co2eKg` | — | note totals, e.g. `111.55` |
+
+OpenDN **never calculates any of these** — every value in the QR is a
+straight copy of what you (or your system) supplied. Leave out anything
+you don't have.
 
 Then either **generate a label** to attach to the paperwork:
 
