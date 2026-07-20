@@ -21,7 +21,11 @@ const note = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'examples', '
   assert.strictEqual(parsed.note, note.note, 'note number round-trips');
   assert.strictEqual(parsed.items.length, note.items.length, 'item count round-trips');
   assert.strictEqual(parsed.items[0].code, note.items[0].code, 'item code round-trips');
-  console.log(`payload round-trip OK (${payload.length} chars, ${parsed.items.length} items)`);
+  assert.strictEqual(parsed.items[0].kg, note.items[0].kg, 'per-item kg round-trips');
+  assert.strictEqual(parsed.items[0].kgCO2e, note.items[0].kgCO2e, 'per-item kgCO2e round-trips');
+  assert.strictEqual(parsed.items[1].kg, undefined, 'items without kg stay 3-column');
+  assert.strictEqual(parsed.co2eKg, note.co2eKg, 'note-level CO2E-KG round-trips');
+  console.log(`payload round-trip OK (${payload.length} chars, ${parsed.items.length} items, kg/kgCO2e columns)`);
 
   // 2. QR PNG decodes byte-identical
   const decoded = await decodePng(await qrPngBuffer(payload, 8));

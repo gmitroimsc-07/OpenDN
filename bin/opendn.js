@@ -47,7 +47,8 @@ Usage:
 
 note.json fields:
   note, date, supplier (required) · customer, deliverTo, ref, custRef,
-  account, weightKg (optional) · items: [{ code, desc, qty }] (required)`;
+  account, weightKg, co2eKg (optional)
+  items: [{ code, desc, qty, kg?, kgCO2e? }] (required)`;
 
 function arg(args, flag, fallback) {
   const i = args.indexOf(flag);
@@ -166,8 +167,9 @@ async function main() {
       custRef: 'OAKFIELD0402-2026',
       account: '456789',
       weightKg: 111.55,
+      co2eKg: 18.42,
       items: [
-        { code: '5101001', desc: 'Trade Satinwood Paint Light Tint 5L S1005-Y10R', qty: 3 },
+        { code: '5101001', desc: 'Trade Satinwood Paint Light Tint 5L S1005-Y10R', qty: 3, kg: 7.1, kgCO2e: 3.9 },
         { code: '5101006', desc: 'Decorators Caulk White 380ml', qty: 12 },
       ],
     }, null, 2));

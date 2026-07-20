@@ -19,6 +19,8 @@ first scannable note, step by step.
 - **Reference parser included** — tracking platforms (SmartWaste and
   similar) can ingest scanned codes with a few lines of code.
 
+![How OpenDN works — capture, build, stamp, use](docs/how-it-works.png)
+
 ## Install
 
 Requires [Node.js](https://nodejs.org) 18+ (Windows, macOS or Linux).
@@ -30,10 +32,58 @@ npm install
 npm link          # makes the `opendn` command available everywhere
 ```
 
-## Quick start
+## Quick start — install the OpenDN printer once, then just print
 
-1. Describe a delivery note as JSON (print a template with
-   `opendn example > note.json`, then edit):
+Windows (terminal opened with *Run as administrator*):
+
+```powershell
+opendn printer install --input C:\opendn\in
+```
+
+Linux/macOS:
+
+```bash
+sudo opendn printer install --input ~/opendn/in
+```
+
+That's it. **OpenDN** now appears in every print dialog and the stamping
+engine runs as a background service. Print a delivery note to it from any
+application — your ERP, LibreOffice, a browser — and a **stamped PDF is
+saved automatically to the output folder** (`C:\opendn\out` /
+`~/opendn/out`; change with `--output`), date+time in the name, with the
+payload as a `.txt` beside it and the captured original in `archive/`.
+
+**Printing is never blocked.** Anything OpenDN can't parse — a scan with
+no text layer, a layout it doesn't know, a document that isn't a delivery
+note at all — **passes through untouched** to `review/`, flagged with a
+`.reason.txt` saying exactly why. Nothing is ever guessed or modified in
+place. Parsing rules per supplier are small JSON files in
+[`templates/`](templates/) ([`docs/templates.md`](docs/templates.md)),
+with a generic fallback for common layouts. Details and platform notes:
+[`docs/printer.md`](docs/printer.md).
+
+## Other ways in
+
+The printer is a front door to a folder pipeline you can also feed
+directly — from an ERP's PDF export or a script:
+
+```bash
+opendn watch in/ out/            # every PDF landing in in/ comes out stamped
+opendn watch in/ out/ --once     # process what's there now, then exit
+```
+
+(This is the engine the printer service runs for you — installing the
+printer means never typing this.) Each PDF is read from its text layer
+only — no OCR, scans are flagged to `review/`, never guessed. Folders and
+defaults can live in `opendn.config.json`.
+
+## For suppliers & integrators — exact ERP data, richest QR
+
+Skip document parsing entirely: feed OpenDN the note's data straight from
+your system and the payload is exact by construction — including
+**per-item weight (kg) and embodied carbon (kgCO2e) even when they're not
+printed on the page**. Describe the note as JSON (template:
+`opendn example > note.json`):
 
 ```json
 {
@@ -42,21 +92,24 @@ npm link          # makes the `opendn` command available everywhere
   "supplier": "Brightmoor Trade Supplies Ltd, 12 Foundry Lane, Milton Keynes MK9 1AA",
   "deliverTo": "Stonegate Site 12, 55 Meadow Way, Northbridge NB1 5GH",
   "weightKg": 111.55,
+  "co2eKg": 18.42,
   "items": [
-    { "code": "5101001", "desc": "Trade Satinwood Paint Light Tint 5L", "qty": 3 },
+    { "code": "5101001", "desc": "Trade Satinwood Paint Light Tint 5L", "qty": 3, "kg": 7.1, "kgCO2e": 3.9 },
     { "code": "5101006", "desc": "Decorators Caulk White 380ml", "qty": 12 }
   ]
 }
 ```
 
-2. Generate a printable label, or stamp your existing PDF:
+Then generate a printable label, or stamp your existing PDF:
 
 ```bash
 opendn generate note.json -o label.pdf --qr qr.png
 opendn stamp delivery-note.pdf note.json -o stamped.pdf
 ```
 
-3. Scan the code with any phone — the full note appears as text.
+Most ERP/accounts systems can export delivery notes as CSV or JSON — map
+the export to these fields and call `opendn` from a script or scheduled
+task at print time.
 
 ## For receiving platforms
 
@@ -74,66 +127,14 @@ const note = parsePayload(scannedText);   // { note, date, supplier, items: [...
 ```
 
 The grammar is deliberately trivial — `KEY: value` header lines and
-`code | description | qty` item lines — so implementing it natively in any
-language takes ~20 lines. Full rules in
+`code | description | qty [| kg [| kgCO2e]]` item lines — so implementing
+it natively in any language takes ~20 lines. Full rules in
 [`docs/payload-spec.md`](docs/payload-spec.md).
 
-## The OpenDN printer — the everyday workflow
+## Roadmap
 
-One-time setup — Windows (terminal opened with *Run as administrator*):
-
-```powershell
-opendn printer install --input C:\opendn\in
-```
-
-Linux/macOS:
-
-```bash
-sudo opendn printer install --input ~/opendn/in
-```
-
-That's it. **OpenDN** now appears in every print dialog, and the stamping
-engine runs as a background service. Print a delivery note to it from any
-application — your ERP, LibreOffice, a browser — and seconds later:
-
-- `~/opendn/out/NAME-20260205-054800.stamped.pdf` — your document with
-  the QR on it, date+time in the name so every print is unique (print
-  this one on paper)
-- a `.payload.txt` beside it — the payload as text
-- `~/opendn/out/archive/` — the captured original, untouched
-- `~/opendn/out/review/` — anything unparseable, untouched, with a
-  `.reason.txt` explaining why (**fail-open**: nothing is ever blocked,
-  guessed or modified in place)
-
-Not every document is a delivery note — so nothing is captured
-automatically. You choose, per document, by choosing the printer; and if
-you misfire, the PDF sits untouched in `review/`. Parsing rules per
-supplier are small JSON files in [`templates/`](templates/) (see
-[`docs/templates.md`](docs/templates.md)), with a generic fallback for
-common layouts. Details and platform notes:
-[`docs/printer.md`](docs/printer.md).
-
-## The watch folder — other ways in
-
-The printer is a front door to a folder pipeline you can also feed
-directly — from an ERP's PDF export or a script:
-
-```bash
-opendn watch in/ out/            # every PDF landing in in/ comes out stamped
-opendn watch in/ out/ --once     # process what's there now, then exit
-```
-
-(This is the engine the printer service runs for you — installing the
-printer means never typing this.) Each PDF is read from its text layer
-only — no OCR, scans are flagged to `review/`, never guessed. Folders and
-defaults can live in `opendn.config.json`.
-
-## Exporting from your system
-
-Most ERP/accounts systems can export delivery notes as CSV or JSON. Map
-your export to the `note.json` fields above and call `opendn` from a script
-or scheduled task at print time — or export PDFs straight into the
-watcher's input folder (above).
+Where this is going — the network print gateway, platform connectors, npm
+releases and more: [ROADMAP.md](ROADMAP.md).
 
 ## Test
 

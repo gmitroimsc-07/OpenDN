@@ -26,9 +26,10 @@ REF: G123/SO45678901
 CUST-REF: OAKFIELD0402-2026
 ACCOUNT: 456789
 ITEMS: 14
-5101001 | Trade Satinwood Paint Light Tint 5L S1005-Y10R | 3
+5101001 | Trade Satinwood Paint Light Tint 5L S1005-Y10R | 3 | 7.1 | 3.9
 5101002 | QD Exterior Flexible Undercoat White 5L | 1
 WEIGHT-KG: 111.55
+CO2E-KG: 18.42
 ```
 
 ### Rules
@@ -41,9 +42,13 @@ WEIGHT-KG: 111.55
    ignored by parsers (future versions may add keys).
 3. **`ITEMS: n`** declares the number of item lines that follow. Parsers
    should verify the count — a mismatch means the payload was truncated.
-4. **Item lines** are `code | description | quantity`, pipe-separated.
-   Values never contain `|` or line breaks (the writer strips them).
-5. **`WEIGHT-KG: x`** (optional) closes the payload.
+4. **Item lines** are `code | description | qty [| kg [| kgCO2e]]`,
+   pipe-separated: 3 columns minimum, with optional per-line weight (kg)
+   and embodied carbon (kg CO2e) — data the delivery system may know even
+   when it is not printed on the page. `kgCO2e` requires `kg`. Values
+   never contain `|` or line breaks (the writer strips them).
+5. **`WEIGHT-KG: x`** (optional) and **`CO2E-KG: x`** (optional) close the
+   payload with note totals.
 6. Dates are `YYYY-MM-DD` optionally followed by ` HH:MM`.
 
 ### QR requirements
@@ -71,10 +76,13 @@ WEIGHT-KG: 111.55
   "ref": "…",
   "custRef": "…",
   "account": "…",
-  "items": [ { "code": "5101001", "desc": "…", "qty": 3 } ],
-  "weightKg": 111.55
+  "items": [ { "code": "5101001", "desc": "…", "qty": 3, "kg": 7.1, "kgCO2e": 3.9 } ],
+  "weightKg": 111.55,
+  "co2eKg": 18.42
 }
 ```
+
+(`kg`, `kgCO2e` and `co2eKg` appear only when present in the payload.)
 
 Any language can implement the same in ~20 lines: split lines, match
 `KEY: value`, split item lines on `|`.

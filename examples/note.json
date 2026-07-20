@@ -12,7 +12,9 @@
     {
       "code": "5101001",
       "desc": "Trade Satinwood Paint Light Tint 5L S1005-Y10R",
-      "qty": 3
+      "qty": 3,
+      "kg": 7.1,
+      "kgCO2e": 3.9
     },
     {
       "code": "5101002",
@@ -32,7 +34,9 @@
     {
       "code": "5101005",
       "desc": "Vinyl Matt Emulsion Tinted Light 5L S1005-Y10R",
-      "qty": 4
+      "qty": 4,
+      "kg": 24.8,
+      "kgCO2e": 9.6
     },
     {
       "code": "5101006",
@@ -42,7 +46,9 @@
     {
       "code": "5101007",
       "desc": "Quick-Set Filler 10kg",
-      "qty": 1
+      "qty": 1,
+      "kg": 10.4,
+      "kgCO2e": 2.2
     },
     {
       "code": "5101008",
@@ -79,5 +85,6 @@
       "desc": "Medium Pile Woven Sleeve 10pk 4in",
       "qty": 1
     }
-  ]
+  ],
+  "co2eKg": 18.42
 }

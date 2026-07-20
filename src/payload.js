@@ -23,6 +23,10 @@ function clean(value) {
   return String(value).replace(/[\r\n|]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function has(value) {
+  return value !== undefined && value !== null && value !== '';
+}
+
 /**
  * Build a OpenDN v1 payload string from a note object.
  * Required: note, date, supplier, items (array of {code, desc, qty}).
@@ -47,11 +51,16 @@ function buildPayload(note) {
     if (!it.code || !it.desc || it.qty === undefined) {
       throw new Error('each item needs code, desc and qty');
     }
-    lines.push(`${clean(it.code)} | ${clean(it.desc)} | ${clean(it.qty)}`);
+    if (has(it.kgCO2e) && !has(it.kg)) {
+      throw new Error(`item ${it.code}: kgCO2e requires kg (grammar: qty [| kg [| kgCO2e]])`);
+    }
+    let line = `${clean(it.code)} | ${clean(it.desc)} | ${clean(it.qty)}`;
+    if (has(it.kg)) line += ` | ${clean(it.kg)}`;
+    if (has(it.kgCO2e)) line += ` | ${clean(it.kgCO2e)}`;
+    lines.push(line);
   }
-  if (note.weightKg !== undefined && note.weightKg !== null && note.weightKg !== '') {
-    lines.push(`WEIGHT-KG: ${clean(note.weightKg)}`);
-  }
+  if (has(note.weightKg)) lines.push(`WEIGHT-KG: ${clean(note.weightKg)}`);
+  if (has(note.co2eKg)) lines.push(`CO2E-KG: ${clean(note.co2eKg)}`);
 
   const payload = lines.join('\n');
   if (payload.length > MAX_PAYLOAD_CHARS) {
@@ -80,13 +89,20 @@ function parsePayload(text) {
   for (const raw of lines.slice(1)) {
     const line = raw.trim();
     if (!line) continue;
-    const kv = line.match(/^([A-Z-]+):\s*(.*)$/);
+    const kv = line.match(/^([A-Z0-9-]+):\s*(.*)$/);
     if (kv && kv[1] === 'ITEMS') { declaredItems = parseInt(kv[2], 10); continue; }
     if (kv && kv[1] === 'WEIGHT-KG') { note.weightKg = parseFloat(kv[2]); continue; }
+    if (kv && kv[1] === 'CO2E-KG') { note.co2eKg = parseFloat(kv[2]); continue; }
     if (kv && keyToProp[kv[1]]) { note[keyToProp[kv[1]]] = kv[2]; continue; }
+    // unknown KEY: lines are ignored (future versions may add keys) — but a
+    // pipe means it's really an item line whose code contains a colon
+    if (kv && !line.includes('|')) continue;
     const parts = line.split('|').map((s) => s.trim());
-    if (parts.length === 3) {
-      note.items.push({ code: parts[0], desc: parts[1], qty: parseFloat(parts[2]) });
+    if (parts.length >= 3 && parts.length <= 5) {
+      const item = { code: parts[0], desc: parts[1], qty: parseFloat(parts[2]) };
+      if (parts.length >= 4) item.kg = parseFloat(parts[3]);
+      if (parts.length === 5) item.kgCO2e = parseFloat(parts[4]);
+      note.items.push(item);
       continue;
     }
     throw new Error(`unrecognised line: "${line}"`);
