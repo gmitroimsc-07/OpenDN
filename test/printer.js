@@ -11,7 +11,7 @@ const { execFileSync } = require('child_process');
 const { brightmoorPdf } = require('./fixtures');
 const { loadConfig } = require('../src/config');
 const { watch } = require('../src/watch');
-const { serviceUnit, winInstallScript, winUninstallScript, winStatusScript } = require('../src/printer');
+const { serviceUnit, layout, winInstallScript, winUninstallScript, winStatusScript, psq } = require('../src/printer');
 
 const BACKEND = path.join(__dirname, '..', 'printer', 'opendn-backend');
 
@@ -78,32 +78,51 @@ function runBackend(args, { dest, stdin } = {}) {
   assert.strictEqual(results.processed[0].note.note, 'DN10245876', 'captured job parsed by template');
   console.log('printer → watcher → stamped PDF OK');
 
-  // 6. the watcher-service unit file is generated correctly
-  const unit = serviceUnit({ nodeBin: '/usr/bin/node', opendnBin: '/opt/opendn/bin/opendn.js', input: '/data/in', output: '/data/out' });
-  assert.ok(unit.includes('ExecStart=/usr/bin/node /opt/opendn/bin/opendn.js watch /data/in /data/out'), 'ExecStart wired');
+  // 6. the watcher-service unit file is generated correctly — from source
+  //    (node + script) and from the single-file build (the program itself)
+  const unit = serviceUnit({ command: ['/usr/bin/node', '/opt/opendn/bin/opendn.js'], input: '/data/in', output: '/data/out', templates: '/data/templates' });
+  assert.ok(unit.includes('ExecStart=/usr/bin/node /opt/opendn/bin/opendn.js watch /data/in /data/out --templates /data/templates'), 'ExecStart wired (source)');
   assert.ok(unit.includes('Restart=on-failure'), 'service restarts on failure');
   assert.ok(unit.includes('WantedBy=default.target'), 'starts at login');
+  const exeUnit = serviceUnit({ command: ['/usr/local/bin/opendn'], input: '/data/in', output: '/data/out', templates: '/data/templates' });
+  assert.ok(exeUnit.includes('ExecStart=/usr/local/bin/opendn watch /data/in'), 'ExecStart wired (single-file build)');
   console.log('service unit generation OK');
 
-  // 7. Windows PowerShell script generation (scripts run on Windows only;
+  // 7. default folder layout: out/ and templates/ next to the capture folder
+  const dirs = layout({ input: '/data/opendn/in' }, path.posix);
+  assert.deepStrictEqual(dirs, { input: '/data/opendn/in', output: '/data/opendn/out', templates: '/data/opendn/templates' }, 'layout defaults');
+  const winDirs = layout({ input: 'C:\\opendn\\in' }, path.win32);
+  assert.strictEqual(winDirs.templates, 'C:\\opendn\\templates', 'layout defaults (Windows)');
+  assert.throws(() => layout({}), /input folder is required/, 'input required');
+  console.log('folder layout OK');
+
+  // 8. Windows PowerShell script generation (scripts run on Windows only;
   //    their construction is verified everywhere)
   const win = {
     name: 'OpenDN',
     input: 'C:\\opendn\\in',
     output: 'C:\\opendn\\out',
+    templates: 'C:\\opendn\\templates',
     port: 'C:\\opendn\\in\\capture.pdf',
-    nodeBin: 'C:\\Program Files\\nodejs\\node.exe',
-    opendnBin: 'C:\\opendn\\OpenDN\\bin\\opendn.js',
+    command: ['C:\\Program Files\\OpenDN\\opendn.exe'],
   };
   const ps = winInstallScript(win);
   assert.ok(ps.includes("Add-PrinterPort -Name 'C:\\opendn\\in\\capture.pdf'"), 'file-path port added');
   assert.ok(ps.includes("-DriverName 'Microsoft Print To PDF'"), 'built-in PDF driver used');
-  assert.ok(ps.includes("New-ScheduledTaskAction -Execute 'C:\\Program Files\\nodejs\\node.exe'"), 'spaces in node path survive');
-  assert.ok(ps.includes('watch "C:\\opendn\\in" "C:\\opendn\\out"'), 'engine watches the right folders');
+  assert.ok(ps.includes("New-ScheduledTaskAction -Execute 'C:\\Program Files\\OpenDN\\opendn.exe'"), 'installed exe runs the engine');
+  assert.ok(ps.includes(`-Argument 'watch "C:\\opendn\\in" "C:\\opendn\\out" --templates "C:\\opendn\\templates"'`), 'engine watches the right folders');
+  assert.ok(ps.includes("icacls $d /grant '*S-1-5-32-545:(OI)(CI)M'"), 'users may use the folders');
   assert.ok(ps.includes('WindowsBuiltInRole]::Administrator'), 'elevation is checked');
+  const fromSource = winInstallScript({ ...win, command: ['C:\\Program Files\\nodejs\\node.exe', 'C:\\src\\OpenDN\\bin\\opendn.js'] });
+  assert.ok(fromSource.includes(`-Argument '"C:\\src\\OpenDN\\bin\\opendn.js" watch`), 'from source: node runs the script');
   assert.ok(winUninstallScript({ name: 'OpenDN' }).includes('Unregister-ScheduledTask'), 'uninstall removes the task');
   assert.ok(winStatusScript({ name: 'OpenDN' }).includes('Get-Printer'), 'status queries the printer');
-  assert.throws(() => winInstallScript({ ...win, input: "C:\\o'; Remove-Item x" }), 'quote injection rejected');
+  // quotes in paths are escaped, never able to end the string
+  const evil = winInstallScript({ ...win, input: "C:\\Users\\O'Brien'; Remove-Item x" });
+  assert.ok(evil.includes("'C:\\Users\\O''Brien''; Remove-Item x'"), 'apostrophes doubled');
+  assert.strictEqual(psq('a\u2019b'), "'a\u2019\u2019b'", 'typographic quotes doubled too');
+  assert.throws(() => psq('a\nb'), /line breaks/, 'line breaks rejected');
+  assert.throws(() => winInstallScript({ ...win, input: 'C:\\a"b' }), /double quotes/, 'double quote in a path rejected');
   console.log('Windows install/uninstall/status script generation OK');
 
   console.log('\nall printer tests passed');

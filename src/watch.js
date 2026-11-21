@@ -62,14 +62,16 @@ async function watch(cfg, { once = false, log = console.log } = {}) {
     fs.mkdirSync(dir, { recursive: true });
   }
   const templates = loadTemplates(cfg.templates);
-  log(`opendn watch — ${templates.length} supplier template(s) from ${cfg.templates}`);
+  log(`opendn watch — ${templates.length} supplier template(s) from ${cfg.templates || 'the built-in set'}`);
   log(`  input: ${cfg.input}\n  output: ${cfg.output}\n  archive: ${cfg.archive}\n  review: ${cfg.review}`);
 
   const results = { processed: [], review: [] };
   const handle = async (file) => {
     if (!/\.pdf$/i.test(file)) return;
     try {
-      const r = await processPdf(file, cfg, templates);
+      // reloaded per document: a template dropped into the folder works at
+      // once, and a broken one sends PDFs to review/ instead of stopping us
+      const r = await processPdf(file, cfg, loadTemplates(cfg.templates));
       results.processed.push(r);
       log(`✓ ${path.basename(file)} → ${path.basename(r.outPdf)} (${r.note.items.length} lines, template: ${r.template})`);
     } catch (err) {

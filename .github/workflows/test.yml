@@ -18,3 +18,42 @@ jobs:
           node-version: 18
       - run: npm ci
       - run: npm test
+
+  # Build the single-file executable on each OS and run it outside the repo
+  executable:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            file: opendn-linux-x64
+          - os: windows-latest
+            file: opendn-windows-x64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+      - run: npm ci
+      - run: node scripts/build.js native
+      - run: node test/exe.js dist/${{ matrix.file }}
+
+  # Install the real OpenDN printer on Windows, print a note to it, check
+  # the stamped PDF, uninstall
+  windows-printer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+      - run: npm ci
+      - run: node scripts/build.js windows-x64
+      - shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File test\windows-printer-e2e.ps1 dist\opendn-windows-x64.exe

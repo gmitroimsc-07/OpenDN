@@ -7,26 +7,35 @@
 
 const fs = require('fs');
 const path = require('path');
+const { readAsset, listAssets } = require('./assets');
 
-/** Load every *.json template in a directory. Missing dir → empty list. */
+/**
+ * Load every *.json template in a directory. A missing dir gives an empty
+ * list; dir null means the built-in set that ships with OpenDN.
+ */
 function loadTemplates(dir) {
-  if (!dir || !fs.existsSync(dir)) return [];
-  const templates = [];
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort()) {
-    const full = path.join(dir, file);
-    let tpl;
-    try { tpl = JSON.parse(fs.readFileSync(full, 'utf8')); }
-    catch (e) { throw new Error(`bad template ${file}: ${e.message}`); }
-    if (!tpl.name || !Array.isArray(tpl.match) || tpl.match.length === 0) {
-      throw new Error(`bad template ${file}: needs "name" and non-empty "match" array`);
-    }
-    if (!tpl.fields || !tpl.items || !tpl.items.pattern) {
-      throw new Error(`bad template ${file}: needs "fields" and "items.pattern"`);
-    }
-    tpl.file = file;
-    templates.push(tpl);
+  if (dir === null || dir === undefined) {
+    return listAssets('templates')
+      .filter((rel) => rel.endsWith('.json'))
+      .map((rel) => parseTemplate(readAsset(rel), path.basename(rel)));
   }
-  return templates;
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort()
+    .map((file) => parseTemplate(fs.readFileSync(path.join(dir, file), 'utf8'), file));
+}
+
+function parseTemplate(text, file) {
+  let tpl;
+  try { tpl = JSON.parse(text); }
+  catch (e) { throw new Error(`bad template ${file}: ${e.message}`); }
+  if (!tpl.name || !Array.isArray(tpl.match) || tpl.match.length === 0) {
+    throw new Error(`bad template ${file}: needs "name" and non-empty "match" array`);
+  }
+  if (!tpl.fields || !tpl.items || !tpl.items.pattern) {
+    throw new Error(`bad template ${file}: needs "fields" and "items.pattern"`);
+  }
+  tpl.file = file;
+  return tpl;
 }
 
 /** First template whose every match string appears in the text (case-insensitive). */

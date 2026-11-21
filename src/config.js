@@ -41,10 +41,10 @@ function loadConfig(configPath, overrides = {}) {
   for (const key of ['input', 'output', 'templates']) {
     cfg[key] = path.resolve(baseDir, cfg[key]);
   }
-  // no ./templates here and none configured → fall back to the ones that
-  // ship with the package (matters when running as a service, cwd = $HOME)
+  // no ./templates here and none configured → null: the built-in set that
+  // ships with OpenDN (matters for services, whose cwd is $HOME or System32)
   if (!templatesExplicit && !fs.existsSync(cfg.templates)) {
-    cfg.templates = path.join(__dirname, '..', 'templates');
+    cfg.templates = null;
   }
   cfg.archive = path.resolve(baseDir, cfg.archive || path.join(cfg.output, 'archive'));
   cfg.review = path.resolve(baseDir, cfg.review || path.join(cfg.output, 'review'));

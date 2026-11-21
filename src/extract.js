@@ -10,6 +10,9 @@ if (typeof globalThis.DOMMatrix === 'undefined') globalThis.DOMMatrix = class DO
 if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
 
 const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+// pdf.js otherwise loads its worker with a runtime require() that bundlers
+// cannot see, which breaks PDF reading in the single-file executable
+globalThis.pdfjsWorker = require('pdfjs-dist/legacy/build/pdf.worker.js');
 
 const LINE_TOLERANCE_PT = 2.5; // items within this vertical distance share a line
 const GAP_PT = 6;              // wider horizontal gap → column break (double space)

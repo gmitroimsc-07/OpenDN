@@ -3,13 +3,16 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
+const { version } = require('../package.json');
 const { buildPayload, parsePayload } = require('../src/payload');
 const { qrPngBuffer, qrInfo } = require('../src/qr');
 const { labelPdf } = require('../src/label');
 const { stampPdf } = require('../src/stamp');
+const { packaged, listAssets } = require('../src/assets');
 
-const HELP = `opendn — delivery-note QR toolkit (OpenDN v1, plain text)
+const HELP = `opendn ${version} — delivery-note QR toolkit (OpenDN v1, plain text)
+
+Windows: double-click opendn.exe to install the OpenDN printer.
 
 Usage:
   opendn generate <note.json> [-o label.pdf] [--qr qr.png] [--payload payload.txt]
@@ -30,20 +33,28 @@ Usage:
       --once processes the files already there and exits. Folders and
       options can also live in opendn.config.json.
 
-  opendn printer install --input DIR [--output DIR] [--name OpenDN]
+  opendn printer install --input DIR [--output DIR] [--templates DIR] [--name OpenDN]
   opendn printer uninstall [--name OpenDN]
   opendn printer status
       Register a real "OpenDN" printer and start the stamping engine as a
       background service. Linux/macOS: run install/uninstall with sudo.
-      Windows: run them from an elevated (Run as administrator) terminal.
-      After install there is nothing else to run: print a delivery note
-      to "OpenDN" from any application and the stamped PDF appears in the
-      output folder. You choose what enters the pipeline by choosing the
-      printer; anything that isn't a delivery note fails open to review/
-      as an ordinary PDF.
+      Windows: run them as administrator (or just double-click the exe).
+      --output and --templates default to "out" and "templates" next to
+      the input folder. After install there is nothing else to run: print
+      a delivery note to "OpenDN" from any application and the stamped PDF
+      appears in the output folder. You choose what enters the pipeline by
+      choosing the printer; anything that isn't a delivery note fails open
+      to review/ as an ordinary PDF.
 
   opendn example
       Print a template note.json to fill in.
+
+  opendn version
+      Show the version and how this copy was built.
+
+  --pause (any command)
+      Wait for Enter before exiting, so a window opened by double-click
+      stays readable.
 
 note.json fields:
   note, date, supplier (required) · customer, deliverTo, ref, custRef,
@@ -65,8 +76,20 @@ function readNote(file) {
   return note;
 }
 
-async function main() {
-  const [cmd, ...args] = process.argv.slice(2);
+async function main(argv) {
+  const [cmd, ...args] = argv;
+
+  if (!cmd && process.platform === 'win32' && packaged()) {
+    const { windowsSetup } = require('../src/setup');
+    await windowsSetup(version);
+    return;
+  }
+
+  if (cmd === 'version' || cmd === '--version' || cmd === '-v') {
+    const build = packaged() ? 'single-file build' : 'running from source';
+    console.log(`opendn ${version} (${build}) · built-in templates: ${listAssets('templates').length} · printer files: ${listAssets('printer').length}`);
+    return;
+  }
 
   if (cmd === 'generate') {
     const out = arg(args, '-o', 'label.pdf');
@@ -122,19 +145,27 @@ async function main() {
     if (sub === 'install') {
       const input = arg(args, '--input', null);
       const output = arg(args, '--output', null);
-      const r = printer.install({ name, input, output });
-      console.log(`printer "${r.name}" installed — stamped PDFs will appear in: ${r.output}`);
+      const templates = arg(args, '--templates', null);
+      const r = printer.install({ name, input, output, templates });
+      console.log(`✓ printer "${r.name}" installed`);
+      console.log(`  stamped PDFs:      ${r.output}`);
+      console.log(`  capture folder:    ${r.input}`);
+      console.log(`  supplier templates: ${r.templates}`);
+      console.log(`  program:           ${r.program}`);
       if (r.service.installed) {
-        console.log(`watcher service running (${r.service.unit}) — just print to "${r.name}".`);
+        console.log(`\nThe background engine is running (${r.service.unit}).`);
+        console.log(`Print a delivery note to "${r.name}" from any program, then look in ${r.output}`);
       } else {
-        console.log(`could not start the watcher service (${r.service.why})`);
-        console.log(`run it yourself: opendn watch ${r.input} ${r.output}`);
+        console.log(`\ncould not start the background engine (${r.service.why})`);
+        console.log(`run it yourself: opendn watch ${r.input} ${r.output} --templates ${r.templates}`);
       }
       return;
     }
     if (sub === 'uninstall') {
       const r = printer.uninstall({ name });
-      console.log(`printer "${r.name}" removed${r.backendRemoved ? ', backend removed' : ''}${r.serviceRemoved ? ', watcher service removed' : ''}`);
+      console.log(`✓ printer "${r.name}" removed${r.backendRemoved ? ', backend removed' : ''}${r.serviceRemoved ? ', background engine removed' : ''}`);
+      for (const p of r.leftInPlace || []) console.log(`  left in place (delete it if you no longer need it): ${p}`);
+      console.log('  your capture, output and template folders were not touched');
       return;
     }
     if (sub === 'status') {
@@ -180,4 +211,18 @@ async function main() {
   process.exitCode = cmd && cmd !== '--help' && cmd !== '-h' ? 1 : 0;
 }
 
-main().catch((e) => { console.error(`error: ${e.message}`); process.exit(1); });
+(async () => {
+  const argv = process.argv.slice(2);
+  const pause = argv.includes('--pause');
+  if (pause) argv.splice(argv.indexOf('--pause'), 1);
+  try {
+    await main(argv);
+  } catch (e) {
+    console.error(`error: ${e.message}`);
+    process.exitCode = 1;
+  }
+  if (pause) {
+    const { ask } = require('../src/setup');
+    await ask('\nPress Enter to close this window. ');
+  }
+})();
