@@ -1,0 +1,80 @@
+name: release
+
+# Push a tag like v0.6.0 (or v0.6.0-beta.1 for a pre-release) to build,
+# test and publish the single-file executables. See docs/building.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+      - run: npm ci
+      - run: npm test
+      - name: Check the tag matches package.json
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME but package.json says $v"; exit 1; }
+      - run: node scripts/build.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # run each executable on its own operating system before publishing
+  verify:
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            file: opendn-linux-x64
+          - os: windows-latest
+            file: opendn-windows-x64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - if: runner.os == 'Linux'
+        run: chmod +x dist/${{ matrix.file }}
+      - run: node test/exe.js dist/${{ matrix.file }}
+      - if: runner.os == 'Windows'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File test\windows-printer-e2e.ps1 dist\opendn-windows-x64.exe
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "OpenDN $GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md $flags

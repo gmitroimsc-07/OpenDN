@@ -2,9 +2,19 @@
 
 The watcher (`opendn watch`) turns each supplier's delivery-note PDF into an
 OpenDN payload using a **template**: a JSON file describing where that
-supplier's layout puts each field. Templates live in the `templates/` folder
-(or wherever `--templates` / `opendn.config.json` points) — add a file per
-supplier, no code changes.
+supplier's layout puts each field. Add a file per supplier, no code
+changes, in the templates folder:
+
+- installed printer: `C:\opendn\templates` (Windows) or
+  `~/opendn/templates` (Linux) — created by `printer install`, starting
+  with the built-in example;
+- `opendn watch`: `./templates`, or wherever `--templates` /
+  `opendn.config.json` points; with neither, the built-in set is used.
+
+Templates are read again for every document, so a new or corrected
+template applies from the next print — no restart. A template with a JSON
+mistake sends PDFs to `review/` with the error as the reason, rather than
+stopping anything.
 
 When no template matches, a conservative generic parser tries common layouts;
 if it cannot find a note number, date, supplier and at least one item line,

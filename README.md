@@ -21,45 +21,67 @@ first scannable note, step by step.
 
 ![How OpenDN works — capture, build, stamp, use](docs/how-it-works.png)
 
-## Install
+## Quick start — install the OpenDN printer once, then just print
 
-Requires [Node.js](https://nodejs.org) 18+ (Windows, macOS or Linux).
+**No Node.js, git or npm needed** — OpenDN ships as a single file.
+
+### Windows — download and double-click
+
+1. Download **`opendn-windows-x64.exe`** from the
+   [Releases page](https://github.com/gmitroimsc-07/OpenDN/releases).
+2. Double-click it and press **Enter**. Windows asks for administrator
+   permission — click **Yes**.
+3. Done: **OpenDN** is now in every print dialog.
+
+> The file is not code-signed yet, so the first time Windows may show
+> *"Windows protected your PC"*: click **More info → Run anyway**. You can
+> check your download against `SHA256SUMS.txt` on the release page
+> (`Get-FileHash opendn-windows-x64.exe` in PowerShell).
+
+Setup copies the program to `C:\Program Files\OpenDN` and creates
+`C:\opendn\in` (capture), `C:\opendn\out` (stamped PDFs) and
+`C:\opendn\templates` (supplier templates). To remove it, double-click the
+file again and choose **U**.
+
+### Linux — download and run once
+
+```bash
+chmod +x opendn-linux-x64
+sudo ./opendn-linux-x64 printer install --input ~/opendn/in
+```
+
+The program is copied to `/usr/local/bin/opendn`; folders are
+`~/opendn/in`, `~/opendn/out` and `~/opendn/templates`.
+
+### macOS, or running from source
+
+Requires [Node.js](https://nodejs.org) 18+:
 
 ```bash
 git clone https://github.com/gmitroimsc-07/OpenDN.git
 cd OpenDN
 npm install
-npm link          # makes the `opendn` command available everywhere
+npm link                                          # the `opendn` command
+sudo opendn printer install --input ~/opendn/in   # Windows: run as administrator, no sudo
 ```
 
-## Quick start — install the OpenDN printer once, then just print
+### Then just print
 
-Windows (terminal opened with *Run as administrator*):
-
-```powershell
-opendn printer install --input C:\opendn\in
-```
-
-Linux/macOS:
-
-```bash
-sudo opendn printer install --input ~/opendn/in
-```
-
-That's it. **OpenDN** now appears in every print dialog and the stamping
-engine runs as a background service. Print a delivery note to it from any
-application — your ERP, LibreOffice, a browser — and a **stamped PDF is
-saved automatically to the output folder** (`C:\opendn\out` /
-`~/opendn/out`; change with `--output`), date+time in the name, with the
-payload as a `.txt` beside it and the captured original in `archive/`.
+**OpenDN** appears in every print dialog and the stamping engine runs as a
+background service. Print a delivery note to it from any application —
+your ERP, LibreOffice, a browser — and a **stamped PDF is saved
+automatically to the output folder** (`C:\opendn\out` / `~/opendn/out`;
+change with `--output`), date+time in the name, with the payload as a
+`.txt` beside it and the captured original in `archive/`.
 
 **Printing is never blocked.** Anything OpenDN can't parse — a scan with
 no text layer, a layout it doesn't know, a document that isn't a delivery
 note at all — **passes through untouched** to `review/`, flagged with a
 `.reason.txt` saying exactly why. Nothing is ever guessed or modified in
-place. Parsing rules per supplier are small JSON files in
-[`templates/`](templates/) ([`docs/templates.md`](docs/templates.md)),
-with a generic fallback for common layouts. Details and platform notes:
+place. Parsing rules per supplier are small JSON files you drop into the
+`templates` folder — picked up with the next print, no restart
+([`docs/templates.md`](docs/templates.md)) — with a generic fallback for
+common layouts. Details and platform notes:
 [`docs/printer.md`](docs/printer.md).
 
 ## Other ways in
@@ -159,6 +181,20 @@ npm test
 Builds a payload from the example note, renders the label and a stamped
 PDF, decodes the QR back off the rendered output with zxing (the same
 engine real scanner apps use), and checks the result is byte-identical.
+
+Every push also builds the single-file executables and runs them outside
+the repository on Linux and Windows, and runs a **real Windows printer
+test**: install the OpenDN printer, print a delivery note to it, check the
+stamped PDF's payload, uninstall
+([`test/windows-printer-e2e.ps1`](test/windows-printer-e2e.ps1) — you can
+run it on your own PC too).
+
+## Building the executables & releases
+
+`node scripts/build.js` builds `dist/opendn-windows-x64.exe` and
+`dist/opendn-linux-x64` (requires [Bun](https://bun.sh)); pushing a
+`v*` tag builds, tests and publishes them as a GitHub Release. Details:
+[`docs/building.md`](docs/building.md).
 
 ## Licence
 

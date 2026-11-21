@@ -21,8 +21,18 @@ with a phone camera, and nobody ever retypes a delivery note again.
 
 ## 1. Install
 
-You need [Node.js](https://nodejs.org) 18 or newer (Windows, macOS or
-Linux). Then:
+OpenDN is a single program file — nothing else to install. Pick one:
+
+**Windows (most people):** download `opendn-windows-x64.exe` from the
+[Releases page](https://github.com/gmitroimsc-07/OpenDN/releases) and
+double-click it. That sets up the OpenDN printer (section 3) in one go.
+If Windows shows *"Windows protected your PC"*, click **More info → Run
+anyway** — the file isn't code-signed yet.
+
+**Linux:** download `opendn-linux-x64`, then `chmod +x opendn-linux-x64`.
+
+**macOS, or to work on the code:** install [Node.js](https://nodejs.org)
+18 or newer, then:
 
 ```bash
 git clone https://github.com/gmitroimsc-07/OpenDN.git
@@ -32,11 +42,17 @@ npm link        # makes the `opendn` command available everywhere
 npm test        # optional: verify everything works on your machine
 ```
 
-`npm link` may need `sudo` on some systems. To check it worked:
+`npm link` may need `sudo` on some systems.
 
-```bash
-opendn --help
-```
+**In the commands below, `opendn` means:**
+
+| you installed… | type |
+|---|---|
+| from source | `opendn` |
+| the Windows download | `& "C:\Program Files\OpenDN\opendn.exe"` once the printer is installed, or the path of the downloaded file |
+| the Linux download | `opendn` once the printer is installed (it is copied to `/usr/local/bin`), or `./opendn-linux-x64` |
+
+Check it works: `opendn version`.
 
 ---
 
@@ -92,26 +108,23 @@ code — the whole note appears as readable text.
 
 Doing that per note gets old. The way OpenDN is meant to be used day to
 day is as **a real printer called OpenDN in every print dialog**. One-time
-setup on Windows (terminal opened with *Run as administrator*):
+setup:
 
-```powershell
-opendn printer install --input C:\opendn\in
-```
+- **Windows:** double-click `opendn-windows-x64.exe`, press **Enter**,
+  click **Yes** at the administrator prompt. (Or, in a terminal opened
+  with *Run as administrator*: `opendn printer install --input C:\opendn\in`.)
+- **Linux:** `sudo ./opendn-linux-x64 printer install --input ~/opendn/in`
+- **From source (Linux/macOS):** `sudo opendn printer install --input ~/opendn/in`
 
-or on Linux/macOS:
-
-```bash
-sudo opendn printer install --input ~/opendn/in
-```
-
-That single command registers the printer *and* starts the stamping
-engine as a background service — there is nothing to keep running by
-hand. From then on:
+That registers the printer *and* starts the stamping engine as a
+background service — there is nothing to keep running by hand. It also
+creates a `templates` folder next to `in` and `out` for your supplier
+templates (section 5). From then on:
 
 1. Open the delivery note in whatever produced it (ERP, LibreOffice,
    browser…) and hit **Print**.
 2. Choose **OpenDN** as the printer.
-3. Seconds later, collect from `~/opendn/out`:
+3. Seconds later, collect from `C:\opendn\out` (Windows) or `~/opendn/out`:
    - `NAME-20260205-054800.stamped.pdf` — your document with the QR,
      stamped with the print's date and time so every file is unique
      (print this one on your real printer)
@@ -125,9 +138,10 @@ automatically. *You* choose, per document, by choosing the printer. And a
 misfire costs nothing: a non-delivery-note printed to OpenDN just sits
 untouched in `review/`.
 
-`opendn printer status` shows the queue and the service;
-`printer uninstall` (admin/sudo) removes everything. More — service logs,
-platform notes, how it works inside: [`printer.md`](printer.md).
+`opendn printer status` shows the queue and the service. To remove it:
+on Windows double-click the program again and choose **U**; elsewhere
+`sudo opendn printer uninstall`. More — service logs, platform notes, how
+it works inside: [`printer.md`](printer.md).
 
 ---
 
@@ -162,9 +176,10 @@ layout puts the note number, date, addresses and item table. Two ways:
 1. **Generic fallback** — built-in heuristics that handle common layouts
    ("Delivery Note No: …", "Date …", `code  description  qty` tables). No
    setup, works surprisingly often.
-2. **Supplier templates** — one small JSON file per supplier in
-   `templates/`, no code changes. Takes ~10 minutes per supplier and is
-   exact.
+2. **Supplier templates** — one small JSON file per supplier in the
+   templates folder (`C:\opendn\templates` / `~/opendn/templates` once
+   the printer is installed), no code changes, used from the next print.
+   Takes ~10 minutes per supplier and is exact.
 
 The loop for writing one: drop a real PDF from that supplier into the
 watch folder → read the `.reason.txt` it produces in `review/` → write or
@@ -228,8 +243,11 @@ language takes ~20 lines. Full rules: [`payload-spec.md`](payload-spec.md).
 | PDF in `review/`, reason "no text layer" | It's a scan/photo. OpenDN never OCRs — get the digital PDF (print/export from the source system) instead. |
 | PDF in `review/`, reason "could not find: …" | No template matched and the generic parser couldn't find those fields. Write a template for that supplier ([`templates.md`](templates.md)). |
 | `payload is N chars (max 1400…)` | The note is too big for one scannable QR. Shorten item descriptions, or split the note across two codes. |
-| `opendn: command not found` | Re-run `npm link` (possibly with `sudo`), or call `node bin/opendn.js …` from the repo. |
-| `printer install` complains about permissions | It changes system print config: use `sudo` (Linux/macOS) or a terminal opened with *Run as administrator* (Windows). |
+| *"Windows protected your PC"* when opening the `.exe` | The file isn't code-signed yet. Click **More info → Run anyway**. To be sure it's genuine, compare `Get-FileHash opendn-windows-x64.exe` with `SHA256SUMS.txt` on the release page. |
+| Antivirus quarantines the `.exe` | Single-file programs that bundle a runtime are sometimes flagged by heuristics. Check the hash as above, then allow it — or run from source. |
+| Double-clicking does nothing visible after "Yes" | The setup continues in a second (administrator) window — look for it behind other windows. |
+| `opendn: command not found` | From source: re-run `npm link` (possibly with `sudo`). Downloads: see the table in section 1. |
+| `printer install` complains about permissions | It changes system print config: use `sudo` (Linux/macOS) or run as administrator (Windows — double-clicking the `.exe` does this for you). |
 | QR won't scan off paper | Printed too small or too dense. Keep ≥ 40 mm; shorter payloads scan easier. |
 
 Every failure is fail-open by design: your original document is always
@@ -242,8 +260,10 @@ document it couldn't understand.
 ## 9. Command cheat-sheet
 
 ```bash
+# Windows: double-click opendn-windows-x64.exe = install / repair / uninstall menu
 sudo opendn printer install --input DIR     # the printer + engine, one command
 opendn printer status | uninstall
+opendn version                              # version, and how this copy was built
 opendn example > note.json                  # template to fill in
 opendn generate note.json -o label.pdf      # A6 label with QR + summary
 opendn stamp doc.pdf note.json -o out.pdf   # QR onto an existing PDF

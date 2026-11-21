@@ -1,9 +1,11 @@
 # OpenDN Roadmap
 
-Where this project is going. Current state: **v0.4.0** — the core toolkit
-(payload builder/parser, QR generation, A6 label, PDF stamping, CLI),
-Milestone 1, the Watcher (`opendn watch`), and Milestone 2, the virtual
-printer (`opendn printer install`: Windows, Linux and macOS).
+Where this project is going. Current state: **v0.6.0-beta.1** — the core
+toolkit (payload builder/parser, QR generation, A6 label, PDF stamping,
+CLI), Milestone 1, the Watcher (`opendn watch`), Milestone 2, the virtual
+printer (`opendn printer install`: Windows, Linux and macOS), and
+single-file downloads: a Windows `.exe` you double-click to install, and a
+Linux binary, published as GitHub Releases.
 
 ## Design principles (settled — do not reopen without strong reason)
 
@@ -84,12 +86,21 @@ and an admin web UI (review queue, templates, printer config).
 - Webhook/REST push of confirmed notes to tracking platforms
   (BRE SmartWaste and similar), signed and retried.
 - Native OpenDN parsers contributed for other languages (Python, C#).
-- npm publish (`npm i -g opendn`), versioned releases, CI.
+- ✅ Versioned releases and CI: every push builds the executables and
+  runs a real Windows printer test; a `v*` tag publishes a GitHub Release
+  (`docs/building.md`).
+- ⬜ npm publish (`npm i -g opendn`).
 
 ## Milestone 5 — distribution (commercial optional)
 
-Installers (Windows service, systemd), vendor printer-app channel
-(HP Workpath / Ricoh SI etc.), releases and update channel.
+- ✅ Single-file executables (v0.6.0): Windows `.exe` that installs itself
+  on double-click (admin prompt, Program Files, Scheduled Task), Linux
+  binary that installs to `/usr/local/bin`.
+- ⬜ Code signing for the Windows executable (removes the SmartScreen
+  warning; needs a paid certificate or Microsoft's signing service).
+- ⬜ MSI package for silent roll-out by company IT (Group Policy / Intune).
+- ⬜ macOS build (needs Apple signing and notarisation).
+- ⬜ Vendor printer-app channel (HP Workpath / Ricoh SI etc.), update channel.
 
 ---
 

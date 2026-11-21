@@ -148,10 +148,10 @@ async function main(argv) {
       const templates = arg(args, '--templates', null);
       const r = printer.install({ name, input, output, templates });
       console.log(`✓ printer "${r.name}" installed`);
-      console.log(`  stamped PDFs:      ${r.output}`);
-      console.log(`  capture folder:    ${r.input}`);
+      console.log(`  stamped PDFs:       ${r.output}`);
+      console.log(`  capture folder:     ${r.input}`);
       console.log(`  supplier templates: ${r.templates}`);
-      console.log(`  program:           ${r.program}`);
+      console.log(`  program:            ${r.program}`);
       if (r.service.installed) {
         console.log(`\nThe background engine is running (${r.service.unit}).`);
         console.log(`Print a delivery note to "${r.name}" from any program, then look in ${r.output}`);
